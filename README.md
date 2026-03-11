@@ -2,6 +2,8 @@
 ### **1. Introduction**
 Understanding the genetic and molecular architecture of complex traits and adaptative evolution is crucial for advancing sustainable precision breeding in cattle and other livestock. Yet, how genetic variation affects cellular gene expression remains elusive in cattle. Here, by integrating 8,866 bulk RNA-seq samples and 999,192 single cells of 81 cell types in 22 bovine tissues, we presented a comprehensive atlas of regulatory variants at the cell type resolution in cattle. Compared to standard bulk-tissue expression quantitative trait loci (beQTL), we detected 57,043 novel cell-type eQTL in 18,153 genes, which exhibited a stronger tissue/cell-type specificity. By examining genome-wide associations (GWAS) of 44 complex traits, these cell-type eQTL were colocalized with 505 (24%) additional GWAS loci compared to beQTL. Through integrating this resource with selection signals between dairy and beef cattle as well as among 154 ancient DNA samples, we provided tissue/cell-specific regulatory insights into cattle breeding and domestication. Overall, the current atlas of cell-type-specific regulatory variants will serve as an invaluable resource for cattle genomics, selective breeding, and domestication.
 
+![CattleCellGTEx](https://github.com/FarmGTEx/CattleGTEx_phase1_Pipeline_v0/blob/main/CattleGTEx_Phase1.png)
+
 ### **2. Analysis pipeline**
 ### This repository contains analysis pipelines used by the CattleCell-GTEx Consortium, including:
 
