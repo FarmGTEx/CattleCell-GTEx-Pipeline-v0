@@ -48,8 +48,8 @@ for (i in seq_along(traits)) {
     if (nrow(inde_snps) > 0) {
       inde_snps <- inde_snps[inde_snps$p < 1e-5, ]
       significant_snps <- snp[snp$variant_id %in% inde_snps$SNP, ]
-      significant_snps$start <- significant_snps$POS - 100000
-      significant_snps$end <- significant_snps$POS + 100000
+      significant_snps$start <- significant_snps$POS - 1000000
+      significant_snps$end <- significant_snps$POS + 1000000
       candidate_snps <- data.frame()
 
       for (k in 1:nrow(significant_snps)) {
