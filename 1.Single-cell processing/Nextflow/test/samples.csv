@@ -1,0 +1,4 @@
+sampleid,fastq_dir
+MockA,/media/luozize/Single_cell_processing/test/data/fastqs
+MockB,/media/luozize/Single_cell_processing/test/data/fastqs
+MockC,/media/luozize/Single_cell_processing/test/data/fastqs
