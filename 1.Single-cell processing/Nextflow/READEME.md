@@ -1,25 +1,25 @@
-单细胞 RNA-Seq 分析流水线 (Cellranger + Seurat)
+# Single-Cell RNA-Seq Analysis Pipeline (Cell Ranger + Seurat)
 
-本流水线专为处理单细胞测序数据而设计，集成了 Cellranger 进行比对与计数，并利用 Seurat 进行质量控制、双细胞鉴定、整合及细胞聚类分析。
+This pipeline is designed for single-cell RNA sequencing (scRNA-seq) data analysis. It integrates **Cell Ranger** for read alignment and gene counting, followed by **Seurat** for quality control, doublet detection, data integration, and cell clustering.
 
-目录
+---
 
-快速开始
+# Table of Contents
 
-环境准备 (Nextflow 25.04.2)
+* Quick Start
+* Environment Setup (Nextflow 25.04.2)
+* Input Dataset Preparation (Samplesheet)
+* Container Environment
+* Configuration and Resource Management
+* Common Parameters
 
-输入数据集构建 (Samplesheet)
+---
 
-容器运行环境说明
+# 1. Quick Start
 
-配置文件与资源管理
+After preparing the environment (Java 17 or later), run the pipeline using:
 
-常见参数说明
-
-1. 快速开始
-
-在准备好环境后(java17)，使用以下命令运行流水线：
-
+```bash
 ./nextflow run main.nf \
     -profile docker \
     --samplesheet /target_dir/samplesheet.csv \
@@ -30,138 +30,223 @@
     --pcs_use 30 \
     --outdir ../Single_cell_processing/ \
     -resume
+```
 
+---
 
-2. 环境准备 (Nextflow 25.04.2)
+# 2. Environment Setup (Nextflow 25.04.2)
 
-本流水线推荐使用 Nextflow 25.04.2 版本。请按照以下步骤准备运行环境：
+This pipeline is developed and tested with **Nextflow 25.04.2**. Please prepare the environment as follows.
 
-2.1 Java 环境要求
+## 2.1 Java Requirement
 
-Nextflow 依赖 Java 运行，建议安装 Java 17 或以上版本：
+Nextflow requires Java. We recommend **Java 17 or later**.
 
-# 检查 Java 版本
+```bash
+# Check Java version
 java -version
 
-# 若未安装，建议通过 SDKMAN! 安装（推荐）
-curl -s "[https://get.sdkman.io](https://get.sdkman.io)" | bash
+# Install Java via SDKMAN! (recommended)
+curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install java 17.0.x-tem
+```
 
+---
 
-2.2 安装 Nextflow 25.04.2
+## 2.2 Install Nextflow 25.04.2
 
-直接下载对应版本的可执行文件并设置路径：
+Download the corresponding Nextflow release and add it to your system PATH.
 
-# 下载 Nextflow 25.04.2
-wget -O nextflow [https://github.com/nextflow-io/nextflow/releases/download/v25.04.2/nextflow-25.04.2-all](https://github.com/nextflow-io/nextflow/releases/download/v25.04.2/nextflow-25.04.2-all)
+```bash
+# Download Nextflow 25.04.2
+wget -O nextflow https://github.com/nextflow-io/nextflow/releases/download/v25.04.2/nextflow-25.04.2-all
+
 chmod +x nextflow
 sudo mv nextflow /usr/local/bin/
 
-# 验证安装
+# Verify installation
 nextflow -version
+```
 
+---
 
-2.3 Docker 环境要求
+## 2.3 Docker Requirement
 
-本流水线全程使用 Docker 容器，请确保 Docker 服务已启动且用户拥有权限：
+This pipeline runs entirely inside Docker containers.
 
-# 确保 Docker 服务运行
+Please ensure that Docker is installed, the Docker service is running, and your user has permission to execute Docker commands.
+
+```bash
+# Start Docker service
 sudo systemctl start docker
 
-# 检查权限（确保无需 sudo 即可执行 docker 命令）
+# Verify Docker access
 docker ps
+```
 
+---
 
-3. 输入数据集构建 (Samplesheet)
+# 3. Input Dataset Preparation (Samplesheet)
 
-流水线需要一个 CSV 格式的 samplesheet.csv 文件来定位数据。
+The pipeline requires a **CSV** file named `samplesheet.csv` to specify sample information.
 
-3.1 文件格式
+## 3.1 File Format
 
-文件必须包含 sampleid 和 fastq_dir 两列：
+The samplesheet must contain the following two columns:
 
+```csv
 sampleid,fastq_dir
 sample1,/media/Single_cell_processing/srr_test_project/data/fastqs
 sample2,/media/Single_cell_processing/srr_test_project/data/fastqs
 sample3,/media/Single_cell_processing/srr_test_project/data/fastqs
+```
 
+---
 
-3.2 样本名称 (sampleid) 命名规范建议
+## 3.2 Sample Naming Recommendations
 
-唯一性: 每个样本必须具有唯一的标识符。
+Each sample should follow these recommendations:
 
-字符限制: 仅使用字母、数字、下划线 _ 或连字符 -。
+* **Unique ID:** Each sample must have a unique identifier.
+* **Allowed characters:** Use only letters (`A-Z`, `a-z`), numbers (`0-9`), underscores (`_`), or hyphens (`-`).
+* **Recommended naming convention:** `Group_Treatment_Replicate`, for example:
 
-逻辑命名法: 建议采用 组别_处理方式_重复编号 的格式（例如：Control_WT_Rep1）。
+```
+Control_WT_Rep1
+```
 
-4. 容器运行环境说明
+---
 
-本流水线采用双镜像隔离策略：
+# 4. Container Environment
 
-4.1 scrna_pipeline_env:latest (默认容器)
+The pipeline uses **two independent Docker images**.
 
-职责: 执行 Cellranger 比对步骤。
+## 4.1 `scrna_pipeline_env:latest` (Default Container)
 
-环境: 封装 Cellranger 官方环境及必要的基础 Linux 系统依赖。
+**Purpose**
 
-4.2 local_seurat_env:latest (R 分析容器)
+Runs the **Cell Ranger** alignment and counting steps.
 
-职责: 执行 SEURAT_PER_SAMPLE_QC 和 SEURAT_INTEGRATION 步骤。
+**Environment**
 
-环境: 封装 R 4.x 环境及所有关键分析包（Seurat v4, Harmony, DoubletFinder 等）。
+Includes the official Cell Ranger software together with all required Linux dependencies.
 
-5. 配置文件与资源管理
+---
 
-5.1 内存与 CPU 资源设置 (conf/base.config)
+## 4.2 `local_seurat_env:latest` (R Analysis Container)
 
-如需调整单个进程的内存占用，请修改 conf/base.config 中的 withLabel 配额。
+**Purpose**
 
-5.2 默认路径配置 (nextflow.config)
+Runs the **SEURAT_PER_SAMPLE_QC** and **SEURAT_INTEGRATION** processes.
 
-您可以在 nextflow.config 的 params 区域设置项目范围的默认路径和参数：
+**Environment**
 
+Provides an R 4.x environment with all required analysis packages, including:
+
+* Seurat v4
+* Harmony
+* DoubletFinder
+* and other required R packages
+
+---
+
+# 5. Configuration and Resource Management
+
+## 5.1 CPU and Memory Settings (`conf/base.config`)
+
+To adjust CPU or memory allocated to individual processes, modify the corresponding `withLabel` resource settings in:
+
+```
+conf/base.config
+```
+
+---
+
+## 5.2 Default Parameters (`nextflow.config`)
+
+Project-wide default parameters can be configured in the `params` section of:
+
+```
+nextflow.config
+```
+
+Example:
+
+```groovy
 params {
     outdir         = "$baseDir/scRNA_results"
     mito_threshold = 10
     pcs_use        = 30
 }
+```
 
+---
 
-6. 常见参数说明
+# 6. Common Parameters
 
-参数
+| Parameter          | Description                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `--samplesheet`    | Path to the samplesheet CSV file                                                                    |
+| `--ref_fa`         | Path to the reference genome FASTA file                                                             |
+| `--ref_gtf`        | Path to the reference genome GTF annotation file                                                    |
+| `--species_name`   | Species name used for building the Cell Ranger reference                                            |
+| `--mito_threshold` | Mitochondrial gene filtering threshold (default: **10%**)                                           |
+| `--pcs_use`        | Number of principal components (PCs) used for downstream dimensionality reduction (default: **30**) |
+| `--outdir`         | Root directory for output files                                                                     |
 
-描述
+---
 
---samplesheet
+# Directory Structure
 
-样本 CSV 文件路径
+```
+Single_cell_processing/
+├── 00_Reference/             # Cell Ranger reference files
+├── 01_Cellranger_Counts/     # Cell Ranger outputs
+├── 02_Seurat_QC/             # Per-sample Seurat QC results
+├── 03_Seurat_Integration/    # Integrated Seurat analysis results
+├── reference/                # User-provided genome FASTA and GTF files
+├── conf/                     # Nextflow configuration files
+├── pipeline_info/            # Nextflow execution reports and logs
+├── test/                     # Example test dataset
+├── work/                     # Nextflow temporary working directory
+├── main.nf                   # Main Nextflow workflow
+├── nextflow.config           # Pipeline configuration
+└── README.md
+```
 
---ref_fa
+**Directory descriptions**
 
-参考基因组 FASTA 文件路径
+* **reference/**
+  Store the downloaded reference genome FASTA and GTF annotation files. Their locations are specified through `--ref_fa` and `--ref_gtf`.
 
---ref_gtf
+* **00_Reference/**
+  Stores Cell Ranger reference resources generated or used by the pipeline.
 
-参考基因组 GTF 注释文件路径
+* **01_Cellranger_Counts/**
+  Contains Cell Ranger alignment and gene-counting results.
 
---species_name
+* **02_Seurat_QC/**
+  Contains quality control, filtering, doublet detection, and per-sample Seurat objects.
 
-构建索引时的物种名称
+* **03_Seurat_Integration/**
+  Contains integrated Seurat objects, clustering results, UMAP visualizations, and downstream analyses.
 
---mito_threshold
+* **pipeline_info/**
+  Stores Nextflow execution reports, logs, timeline, DAG, and trace information.
 
-线粒体基因过滤阈值（默认 10%）
+* **work/**
+  Temporary working directory automatically created by Nextflow. It stores intermediate files and caches generated during pipeline execution. This directory can become very large. Once the pipeline has successfully completed and the final results have been saved, the `work/` directory can be safely removed if intermediate files are no longer needed.
 
---pcs_use
+---
 
-降维分析使用的 PC 数量（默认 30）
+# Technical Support
 
---outdir
+If the pipeline finishes successfully but generated figures appear blank (white pages), please check whether the RDS files exist in:
 
-结果输出根目录
+```
+03_Seurat_Integration/
+```
 
-技术支持
+The pipeline includes an automatic recovery mechanism. Even if figure generation fails, the core analysis results and Seurat objects will still be preserved.
 
-如果运行中遇到图表生成错误（白纸问题），请检查 results/03_Seurat_Integration 目录下是否有 RDS 数据。本流水线已配置自动恢复机制，即使绘图失败也会完好保留核心数据。
