@@ -17,17 +17,14 @@ library(clusterProfiler)
 library(org.Bt.eg.db)
 library(enrichplot)
 
-# ====================================================================
-# 【原生参数接管】抓取外部传入的项目根目录变量
-# ====================================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
+  stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
 PROJECT_DIR <- args[1]
 # ====================================================================
 
-# 路径解耦：使用 PROJECT_DIR 动态外延
+# Path decoupling: dynamically extend paths using PROJECT_DIR
 setwd(paste0(PROJECT_DIR, "/CattleGTEx/Selection_region/share/home/zju_zhaopj/01-PanCattle-RNA/99-HC/02-Merge"))
 all_fst <- data.frame()
 all_XPclr <- data.frame()
@@ -122,7 +119,6 @@ for (k in 1:length(tissue)) {
   all_OR <- rbind(all_OR, all_OR1)
 }
 
-# 动态输出保护
 out_path_2 <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL_selection/bulk")
 dir.create(out_path_2, recursive = TRUE, showWarnings = FALSE)
 write.csv(all_OR, paste0(out_path_2, "/tissue_specific_OR_fst1-2.csv"))
