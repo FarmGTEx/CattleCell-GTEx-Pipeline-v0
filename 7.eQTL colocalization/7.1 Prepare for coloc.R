@@ -11,7 +11,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
   stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
-PROJECT_DIR <- args[1] # 对应 Bash 中的 $BASE_PROJECT 路径
+PROJECT_DIR <- args[1] # Corresponds to the $BASE_PROJECT path in the Bash script
 # ====================================================================
 
 ###Data prepare for coloc (bulk eQTL)
@@ -29,7 +29,7 @@ for(i in tissue){
 
 for (i in 1:length(tissue)) {
     setwd(path[[i]])
-    eqtl <- fread(paste0(tissue[[i]], "_new_LMM.cis_qtl.txt.gz"))
+    eqtl <- fread(paste0(tissue[[i]], "_new_LMM.cis_qtl.txt.gz")) #produced in 4.QTL mapping
     eqtl$is_eGene = eqtl$pval_g1 < eqtl$pval_g1_threshold &
               eqtl$qval_g1 < 0.05
     eGenes <- eqtl[eqtl$is_eGene == TRUE,]
