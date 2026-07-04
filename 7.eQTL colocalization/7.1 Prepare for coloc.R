@@ -7,18 +7,15 @@ library(R.utils)
 library(SNPRelate)
 library(dplyr)
 
-# ==============================================
-# 【仅增一行参数抓取】抓取外部传入的项目根目录变量
-# =============================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
+  stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
 PROJECT_DIR <- args[1] # 对应 Bash 中的 $BASE_PROJECT 路径
 # ====================================================================
 
 ###Data prepare for coloc (bulk eQTL)
-# 路径修改：使用 PROJECT_DIR 动态拼接
+# Path update: dynamically construct the path using PROJECT_DIR
 setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL"))
 path <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL/")
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -30,7 +27,7 @@ for(i in tissue){
   path[[i]]<-paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL/", i, "/")
 }
 
-for (i in 7:length(tissue)) {
+for (i in 1:length(tissue)) {
     setwd(path[[i]])
     eqtl <- fread(paste0(tissue[[i]], "_new_LMM.cis_qtl.txt.gz"))
     eqtl$is_eGene = eqtl$pval_g1 < eqtl$pval_g1_threshold &
@@ -53,7 +50,7 @@ for (i in 7:length(tissue)) {
     select_qtl <- select_qtl %>% inner_join(snp_freq, by = "variant_id")
     select_qtl$N <- sample_num
     
-    # 路径修改：输出目标目录保护并使用 PROJECT_DIR 动态切换
+    # Path update: protect the output target directory and dynamically switch paths using PROJECT_DIR
     out_dir_1 <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Coloc/coloc/Bulk")
     dir.create(out_dir_1, recursive = TRUE, showWarnings = FALSE)
     setwd(out_dir_1)
@@ -61,7 +58,7 @@ for (i in 7:length(tissue)) {
 }
 
 ##cell components ieqtl
-# 路径修改：使用 PROJECT_DIR 动态外延
+# Path update: dynamically extend the path using PROJECT_DIR
 setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL"))
 path <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL/")
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -111,7 +108,7 @@ for (i in 1:length(tissue)) {
         select_qtl <- select_qtl %>% inner_join(snp_freq, by = "variant_id")
         select_qtl$N <- sample_num
         
-        # 路径修改：输出目标目录保护并使用 PROJECT_DIR 动态切换
+        # Path update: protect the output target directory and dynamically switch paths using PROJECT_DIR
         out_dir_2 <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Coloc/coloc/all_cell_components")
         dir.create(out_dir_2, recursive = TRUE, showWarnings = FALSE)
         setwd(out_dir_2)
@@ -122,7 +119,7 @@ for (i in 1:length(tissue)) {
 
 
 ##cell type eqtl
-# 路径修改：使用 PROJECT_DIR 动态外延
+# Path update: dynamically extend the path using PROJECT_DIR
 setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/cell_specific"))
 path <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/cell_specific/")
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -168,7 +165,7 @@ for (i in 1:length(tissue)) {
       select_qtl <- select_qtl %>% inner_join(snp_freq, by = "variant_id")
       select_qtl$N <- sample_num
       
-      # 路径修改：输出目标目录保护并使用 PROJECT_DIR 动态切换
+      # Path update: protect the output target directory and dynamically switch paths using PROJECT_DIR
       out_dir_3 <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Coloc/coloc/all_cell_specific")
       dir.create(out_dir_3, recursive = TRUE, showWarnings = FALSE)
       setwd(out_dir_3)
@@ -178,7 +175,7 @@ for (i in 1:length(tissue)) {
 
 
 ###cell state ieqtl
-# 路径修改：使用 PROJECT_DIR 动态外延
+# Path update: dynamically extend the path using PROJECT_DIR
 setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state"))
 path <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state/")
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -190,8 +187,7 @@ for(i in tissue){
   path[[i]]<-paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state/", i, "/")
 }
 
-# 保留局部特定组织循环界限 (第14到16个组织)
-for (i in 14:16) {
+for (1:length(tissue)) {
     setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/eQTL/", tissue[[i]]))
     eqtl <- fread(paste0(tissue[[i]], "_bulk_LMM.cis_qtl.txt.gz"))
     eqtl$is_eGene = eqtl$pval_g1 < eqtl$pval_g1_threshold &
@@ -247,7 +243,7 @@ for (i in 14:16) {
                       all_ieGenes <- select_qtl %>% inner_join(snp_freq, by = "variant_id")
                       all_ieGenes$N <- sample_num
                       
-                      # 路径修改：输出目标目录保护并使用 PROJECT_DIR 动态切换
+                      # Path update: protect the output target directory and dynamically switch paths using PROJECT_DIR
                       out_dir_4 <- paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Coloc/coloc/all_cell_state")
                       dir.create(out_dir_4, recursive = TRUE, showWarnings = FALSE)
                       setwd(out_dir_4)
