@@ -25,7 +25,7 @@ PROJECT_DIR <- args[1]
 # ====================================================================
 
 # Path decoupling: dynamically extend paths using PROJECT_DIR
-setwd(paste0(PROJECT_DIR, "/CattleGTEx/Selection_region/share/home/zju_zhaopj/01-PanCattle-RNA/99-HC/02-Merge"))
+setwd(paste0(PROJECT_DIR, "/CattleGTEx/Selection_region/share/home/zju_zhaopj/01-PanCattle-RNA/99-HC/02-Merge")) ##Fst results can be downloaded from Cattle-CellGTEx website
 all_fst <- data.frame()
 all_XPclr <- data.frame()
 all_XPEHH <- data.frame()
