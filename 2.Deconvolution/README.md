@@ -1,121 +1,155 @@
 ========================================================================
-             去卷积分析管道 (Deconvolution Pipeline) 使用说明书
+             Deconvolution Pipeline User Guide
 ========================================================================
 
+#example (single cell data--see Methods in manuscript)
 bash run_deconvolution.sh \
-  --input_pseudo "/faststorage/project/cattle_gtexs/Deconvolution/Cattle/Pseudo/Cerebral cortex/Cerebral cortex_pseudo.rds" \
-  --input_ref "/faststorage/project/cattle_gtexs/Deconvolution/Cattle/Pseudo/Cerebral cortex/Cerebral cortex_ref.rds" \
+  --input_pseudo "/faststorage/project/cattle_gtexs/Deconvolution/Cattle/Pseudo/Cerebral cortex/Cerebral cortex_pseudo.rds" \ #single cell simulation data
+  --input_ref "/faststorage/project/cattle_gtexs/Deconvolution/Cattle/Pseudo/Cerebral cortex/Cerebral cortex_ref.rds" \ #single cell reference data
   --gtf_file "/faststorage/project/cattle_gtexs/reference/Bos_taurus.ARS-UCD1.2.110.gtf" \
   --output_dir "/faststorage/project/cattle_gtexs/Deconvolution/output_results" \
   --project_dir "/faststorage/project/cattle_gtexs" \
   --tissue "Cerebral_cortex"
 
-一、 管道总体简介
-本管道是一套高度整合的单细胞与大样转录组（Bulk RNA-seq）高级去卷积分析工作流。
-全套流程由一个总控 Bash 脚本（run_deconvolution.sh）顺序嵌套调用 5 个功能 R 脚本。
-管道支持纯命令行长参数指定输入输出、日志实时终端滚动与留底双写，并具备严密的运行
-时错误码捕获与熔断机制。
 
-二、 文件结构规范
-请将以下文件放置于服务器的同一个文件夹下：
-├── run_deconvolution.sh                        # 命令行传参总控脚本
-├── 2.1 Pseudo bulk construction.R              # 步骤 1 脚本
-├── 2.2 Deconvolution benchmarking.R            # 步骤 2 脚本
-├── 2.3 DWLS_CellComponents_deconvolution.R    # 步骤 3 脚本
-├── 2.4 BMIND_CellExpression_deconvolution.R    # 步骤 4 脚本
-└── 2.5 MeduSa_CellState_deconvolution.R        # 步骤 5 脚本
+1. Pipeline Overview
 
-运行启动后，管道会自动在当前目录下创建：
-└── pipeline_logs/                              # 存放每个模块的运行报错日志目录
+This pipeline is a highly integrated workflow for advanced deconvolution analysis of single-cell and bulk RNA-seq data.
 
-三、 各分步脚本功能详述、改动说明与使用建议
+The complete workflow is controlled by a master Bash script (run_deconvolution.sh), which sequentially executes five functional R scripts.
 
-------------------------------------------------------------------------
-[步骤 1] 2.1 Pseudo bulk construction.R
-------------------------------------------------------------------------
-- 核心功能：
-  利用输入的单细胞数据，通过数学模拟混合生成已知细胞比例的“伪大样（Pseudo bulk）矩阵”。
-- 改动说明：
-  1. 引入了命令行参数控制，移除了参考基因组 GTF 的硬编码，支持从外部灵活指定。
-  2. 修复了原代码中由于不同分布（Binormal/Normal/Uniform）混合导致的写死输出路径。
-  3. 修改了原代码在 Uniform 分布最后一步写入时将 "Fraction.csv" 误写为 "Farction.csv"
-     的英文拼写差异，并在下文读取时进行了统一。
-- 使用建议：
-  模拟出的 1000 个样本的伪大样数据是整个工作流的基准。在更换物种或组织时，务必通过 
-  Bash 控制端传入对应物种正确的 GTF 基因注释文件，否则外显子长度计算这一步会产生大
-  量 NA 导致程序直接报错中断。
+The pipeline supports command-line long options for specifying input and output paths, real-time terminal output with simultaneous log recording, and robust runtime error-code capture and fail-fast termination mechanisms.
+
+
+2. File Structure
+
+Place the following files in the same directory on the server:
+
+├── run_deconvolution.sh                       # Master command-line pipeline script
+├── 2.1 Pseudo bulk construction.R             # Step 1 script
+├── 2.2 Deconvolution benchmarking.R           # Step 2 script
+├── 2.3 DWLS_CellComponents_deconvolution.R    # Step 3 script
+├── 2.4 BMIND_CellExpression_deconvolution.R   # Step 4 script
+└── 2.5 MeduSa_CellState_deconvolution.R       # Step 5 script
+
+Once the pipeline starts, the following directory will be automatically created in the current working directory:
+
+└── pipeline_logs/                             # Runtime and error logs for each module
+
+
+3. Detailed Description, Modifications, and Usage Recommendations for Each Step
 
 ------------------------------------------------------------------------
-[步骤 2] 2.2 Deconvolution benchmarking.R
+[Step 1] 2.1 Pseudo bulk construction.R
 ------------------------------------------------------------------------
-- 核心功能：
-  使用 2.1 步骤中生成的带有标准真值标签的伪大样，对 8 种传统去卷积算法进行基准性能评估。
-- 改动说明：
-  1. 彻底将脚本中涉及 Uniform 分布读取的硬编码路径，重构为动态读取 2.1 脚本在 
-     random_pseudo/ 目录下生成的真实输出位置，确保上游产出能被下游完美捕捉。
-  2. 在保存各大算法（MuSiC/CDSeq/CIBERSORT等）预测比例的写出语句前，加入了自动检测并
-     创建对应子目录的逻辑，彻底杜绝了因缺少对应文件夹而导致的磁盘写入错误。
-- 使用建议：
-  该脚本涉及 CDSeq 和 CIBERSORT 等高密度迭代算法，耗时较长。建议在首次部署时检查
-  服务器上是否已经通过 source 引入了原作者依赖的 'cibersort.R' 基准函数。
+
+- Core function:
+
+  Generates pseudo-bulk expression matrices with known cell-type proportions by computationally mixing the input single-cell data.
+
+- Modifications:
+
+  1. Added command-line argument support and removed the hard-coded reference genome GTF path, allowing the GTF file to be specified externally.
+
+  2. Fixed hard-coded output paths associated with different simulated distributions (Binormal, Normal, and Uniform).
+
+  3. Corrected the filename "Farction.csv" to "Fraction.csv" in the final output step for the Uniform distribution and standardized the corresponding downstream input filename.
+
+- Usage recommendations:
+
+  The pseudo-bulk data generated for 1,000 simulated samples serve as the benchmark dataset for the entire workflow. When changing the species or tissue, make sure to provide the correct species-specific GTF annotation file through the Bash interface. Otherwise, the exon-length calculation may generate a large number of NA values and cause the pipeline to terminate with an error.
+
 
 ------------------------------------------------------------------------
-[步骤 3] 2.3 DWLS_CellComponents_deconvolution.R
+[Step 2] 2.2 Deconvolution benchmarking.R
 ------------------------------------------------------------------------
-- 核心功能：
-  利用加权最小二乘法（DWLS）算法进行单样本的细胞组分比例精确反推。
-- 改动说明（核心改动）：
-  1. 彻底升级为了生信标准的 optparse 命令行长选项封装，支持在外部通过 --input_ref 等
-     参数精确喂入单细胞参考集与 Bulk TPM 矩阵。
-  2. 【重点修复断层】原版 2.3 只是线性处理单个文件，而原版 2.4 会在大循环里疯狂扫描各
-     个组织文件夹并寻找特定的带组织名的 CSV。本次改动在 2.3 中引入了 --tissue（组织名）
-     参数。2.3 在输出结果时，会自动创建 2.4 想要的目录结构（Results_DWLS/组织名/Results/），
-     并将结果动态命名为 Predict_[组织名]_DWLS.csv，完美打通了 2.3 与 2.4 的嵌合死穴。
-- 使用建议：
-  在运行总控脚本时，务必通过 --tissue 正确传入当前处理的组织英文名（如 Cerebral_cortex），
-  以此激活本步骤的无缝衔接落盘逻辑。
+
+- Core function:
+
+  Benchmarks the performance of eight conventional deconvolution methods using the pseudo-bulk data with known ground-truth cell-type proportions generated in Step 2.1.
+
+- Modifications:
+
+  1. Replaced all hard-coded paths for reading Uniform-distribution data with dynamic paths pointing to the actual output generated by the Step 2.1 script in the random_pseudo/ directory, ensuring seamless transfer of upstream outputs to downstream analyses.
+
+  2. Added automatic detection and creation of the required output subdirectories before saving the predicted proportions from different algorithms (e.g., MuSiC, CDSeq, and CIBERSORT), preventing disk-write errors caused by missing directories.
+
+- Usage recommendations:
+
+  This script includes computationally intensive iterative algorithms such as CDSeq and CIBERSORT and may require substantial runtime. During the initial deployment, check whether the original 'cibersort.R' function required by the workflow has been properly loaded using source() on the server.
+
 
 ------------------------------------------------------------------------
-[步骤 4] 2.4 BMIND_CellExpression_deconvolution.R
+[Step 3] 2.3 DWLS_CellComponents_deconvolution.R
 ------------------------------------------------------------------------
-- 核心功能：
-  基于贝叶斯混合效应模型（bMIND），在已知细胞比例的前提下，剥离反推大样样本中每种细胞
-  类型内部的特异性分子表达谱。
-- 改动说明：
-  1. 严格遵照“不改动原作者核心逻辑”的原则，完整保留了原脚本对服务器多组织单细胞与大样
-     数据取交集、进行全自动批量扫描的超长外层 for 循环和 list 存储结构。
-  2. 将脚本内部所有涉及服务器磁盘环境的硬编码根目录前缀统一抽象为 args[1]（即 Bash 
-     传进来的 PROJECT_DIR 变量），使其具备了跨环境、跨账号移植运行的能力。
-- 使用建议：
-  因为 2.4 脚本在内部会去自动扫描多组织，运行此脚本前，请确保上游 2.3 步骤产出的
-  组织预测结果（或者历史组织结果）已经按照格式存放在对应的 Results_DWLS/ 目录下。
+
+- Core function:
+
+  Uses the dampened weighted least squares (DWLS) algorithm to estimate cell-type proportions in individual bulk samples.
+
+- Modifications (major changes):
+
+  1. Upgraded the script to use standard optparse-based command-line long options, allowing the single-cell reference dataset and bulk TPM matrix to be supplied externally through arguments such as --input_ref.
+
+  2. Resolved the workflow discontinuity between Steps 2.3 and 2.4. The original Step 2.3 processed only a single file, whereas the original Step 2.4 scanned multiple tissue directories and searched for tissue-specific CSV files within a large loop. To bridge this gap, a --tissue argument was introduced in Step 2.3. When saving results, Step 2.3 now automatically creates the directory structure expected by Step 2.4 (Results_DWLS/[tissue]/Results/) and dynamically names the output file as Predict_[tissue]_DWLS.csv, thereby ensuring seamless integration between Steps 2.3 and 2.4.
+
+- Usage recommendations:
+
+  When running the master pipeline script, make sure to provide the correct English tissue name through --tissue (e.g., Cerebral_cortex) to enable seamless output transfer to the next step.
+
 
 ------------------------------------------------------------------------
-[步骤 5] 2.5 MeduSa_CellState_deconvolution.R
+[Step 4] 2.4 BMIND_CellExpression_deconvolution.R
 ------------------------------------------------------------------------
-- 核心功能：
-  打破离散细胞类型的限制，利用 MeDuSA 算法反推大样样本在连续细胞状态/发育轨迹上的丰度趋势。
-- 改动说明：
-  1. 严格保留了原代码的组织批量大循环、多层细胞类型遍历与 Slingshot 拟合轨迹的所有逻辑。
-  2. 将脚本底部的多处 `setwd`、单细胞 RDS 读取和 Bulk 文本读取的写死路径，全部替换为
-     基于 PROJECT_DIR 变量的动态路径拼接。
-  3. 在最终落盘 MammaryGland 发育轨迹 TIFF 趋势图的语句前，加入了自动建立父目录的代码，
-     防止由于缺失物理文件夹导致画图崩溃。
-- 使用建议：
-  MeDuSA 算法在拟合连续细胞状态时对服务器的 CPU 消耗极高（默认开启了 ncpu = 12）。
-  如果服务器核数紧张或处于排队状态，可以根据集群配置调小 R 脚本内部的 ncpu 参数。
 
-四、 运行时防错熔断机制与日志查看说明
-1. 双向实时输出（Tee 机制）：
-   控制脚本采用了高级的管道双写机制（Rscript ... 2>&1 | tee ）。这意味着 R 脚本在
-   运行时吐出的所有进度、Warning 或是包加载信息，都会像你平时直接在终端单步运行 R 一样，
-   【实时滚动显示在屏幕上】，同时在后台一字不落地同步写进 ./pipeline_logs/ 目录下的
-   对应日志文件中，既方便排查，又留底归档。
-2. 精准错误码捕获与流程熔断：
-   总控脚本使用了 PIPESTATUS[0] 数组。一旦中途任何一个 R 脚本因为数据格式错误、矩阵
-   维度不匹配、包缺失或者内存溢出（OOM）而崩溃，它的【真实非零退出错误码】就会立刻被 Bash 
-   拦截捕获。
-   此时，Bash 脚本会触发最高级别的防错熔断，【立刻强制终止后续所有脚本的运行】，绝对不会
-   带着错误数据往后瞎跑。同时会在终端用红字明确提示“运行崩溃”并显式打印出错误码，
-   方便交付与运维排查。
-========================================================================
+- Core function:
+
+  Uses the Bayesian mixed-effects model implemented in bMIND to estimate cell-type-specific molecular expression profiles in bulk samples based on known cell-type proportions.
+
+- Modifications:
+
+  1. Following the principle of preserving the original core analytical logic, the original outer for-loops and list-based data structures for automatically scanning and matching multi-tissue single-cell and bulk datasets were retained.
+
+  2. Replaced all hard-coded server root directory prefixes with args[1] (i.e., the PROJECT_DIR variable passed from the Bash script), enabling the script to be transferred and executed across different environments and user accounts.
+
+- Usage recommendations:
+
+  Because the Step 2.4 script automatically scans multiple tissues, ensure that the tissue-level prediction results generated by the upstream Step 2.3 script, or previously generated tissue-level results, are stored in the corresponding Results_DWLS/ directory using the expected format before running this step.
+
+
+------------------------------------------------------------------------
+[Step 5] 2.5 MeduSa_CellState_deconvolution.R
+------------------------------------------------------------------------
+
+- Core function:
+
+  Extends deconvolution beyond discrete cell types by using the MeDuSA algorithm to infer abundance patterns along continuous cell states and developmental trajectories in bulk samples.
+
+- Modifications:
+
+  1. Preserved the original batch-processing loops across tissues, nested cell-type iterations, and all Slingshot trajectory-fitting procedures.
+
+  2. Replaced multiple hard-coded paths used in setwd(), single-cell RDS input, and bulk data input with dynamically constructed paths based on the PROJECT_DIR variable.
+
+  3. Added automatic parent-directory creation before saving the final MammaryGland developmental trajectory TIFF plots, preventing plotting failures caused by missing directories.
+
+- Usage recommendations:
+
+  The MeDuSA algorithm is computationally intensive when fitting continuous cell states and uses substantial CPU resources (ncpu = 12 by default). If computational resources are limited or the job is waiting in a cluster queue, reduce the ncpu parameter in the R script according to the available cluster resources.
+
+
+4. Runtime Error Handling and Log Management
+
+1. Real-time dual output (tee mechanism):
+
+   The master script uses a dual-output mechanism:
+
+   Rscript ... 2>&1 | tee
+
+   This means that all progress messages, warnings, package-loading information, and other output generated by the R scripts are displayed in real time in the terminal, just as when running an R script interactively. At the same time, all output is simultaneously written to the corresponding log files in the ./pipeline_logs/ directory for troubleshooting and archival purposes.
+
+2. Precise exit-code capture and fail-fast termination:
+
+   The master script uses the PIPESTATUS[0] array to capture the actual exit code of each R script. If any R script fails because of data-format errors, matrix-dimension mismatches, missing packages, or out-of-memory (OOM) errors, its true non-zero exit code is immediately captured by the Bash script.
+
+   The pipeline then triggers a fail-fast mechanism and immediately terminates all subsequent steps, preventing downstream analyses from continuing with invalid or incomplete data. A clear error message and the corresponding exit code are displayed in the terminal to facilitate troubleshooting, deployment, and maintenance.
