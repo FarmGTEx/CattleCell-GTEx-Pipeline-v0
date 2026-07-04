@@ -10,11 +10,11 @@ suppressMessages(library(optparse))   # 引入命令行解析包
 suppressMessages(library(rtracklayer)) # 引入依赖包
 
 # ====================================================================
-# 1. 命令行参数解析 (CLI 封装)
+# 1. Command-line argument parsing (CLI wrapper)
 # ====================================================================
 option_list = list(
-  make_option(c("-p", "--project_dir"), type="character", default=NULL, help="项目大基座根目录路径"),
-  make_option(c("-g", "--gtf_file"), type="character", default=NULL, help="物种基因组 GTF 注释文件路径")
+  make_option(c("-p", "--project_dir"), type="character", default=NULL, help="Project root directory path"),
+  make_option(c("-g", "--gtf_file"), type="character", default=NULL, help="Path to the species-specific genome GTF annotation file")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -22,19 +22,19 @@ opt = parse_args(opt_parser)
 
 if (is.null(opt$project_dir) || is.null(opt$gtf_file)){
   print_help(opt_parser)
-  stop("错误: 必须通过 --project_dir 和 --gtf_file 指定输入路径与参考基因组！", call.=FALSE)
+  stop("Error: both --project_dir and --gtf_file must be provided to specify the input path and reference genome！", call.=FALSE)
 }
 
 # ====================================================================
-# 2. 核心数据导入与死穴修复
+# 2. Core data import and critical bug fixes
 # ====================================================================
 
-## 修复死穴 1：在流程最开始真正读入 GTF 物理文件，确保后续变量不为空
-message("正在导入参考基因组 GTF 文件...")
+## Critical fix 1: Load the GTF file at the beginning of the workflow to ensure that the downstream variable is properly initialized
+message("Loading the reference genome GTF file...")
 gtf_obj <- rtracklayer::import(opt$gtf_file)
 gtf <- as.data.frame(gtf_obj)
 
-## 修复死穴 2：不再盲目扫描当前目录，而是精准定位项目路径
+## Critical fix 2: Instead of scanning the current directory, directly locate the project path
 bulk_exp_dir <- file.path(opt$project_dir, "CattleGTEx/Cattle_bulk_exp")
 setwd(bulk_exp_dir)
 
@@ -46,15 +46,15 @@ tissue <- list0$list0
 
 list1<-NULL
 for(i in tissue){
-  list1[[i]]<-paste0(opt$project_dir, "/CattleGTEx/Cattle_bulk_exp/Bulk_", i, ".txt")
+  list1[[i]]<-paste0(opt$project_dir, "/CattleGTEx/Cattle_bulk_exp/Bulk_", i, ".txt") ##download in Cattle-CellGTEx website (https://file.kiz.ac.cn/cattlecellgtex/RNA-seq%20and%20Genotype/CattleCell-GTEx_v0.Bulk_TPM.zip)
 }
 list2<-NULL
 for(i in tissue){
-  list2[[i]]<-paste0(opt$project_dir, "/CattleGTEx/Cattle_bulk_TPM/Bulk_", i, ".txt")
+  list2[[i]]<-paste0(opt$project_dir, "/CattleGTEx/Cattle_bulk_TPM/Bulk_", i, ".txt") ##download in Cattle-CellGTEx website (https://file.kiz.ac.cn/cattlecellgtex/RNA-seq%20and%20Genotype/CattleCell-GTEx_v0.Bulk_TPM.zip)
 }
 
 # ====================================================================
-# 3. 核心计算与数据过滤逻辑 (原汁原味保持不变)
+# 3. # Core computation and data-filtering logic
 # ====================================================================
 for (i in 1:length(tissue)) {
   bulk <- read.csv(list1[[i]], sep = "\t")
@@ -114,7 +114,7 @@ for (i in 1:length(tissue)) {
     bed <- data.frame(bed_unique[,c(1:4)],bed_unique1)
     names(bed)[1:4] <- c("#Chr","start","end","gene_id")
     
-    # 动态切换并输出到指定的组织目录下
+    # Dynamically switch to and save outputs in the specified tissue directory
     out_dir <- file.path(opt$project_dir, "CattleGTEx/OmiGA/eQTL", tissue[[i]])
     dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
     setwd(out_dir)
