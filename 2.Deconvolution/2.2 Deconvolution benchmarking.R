@@ -14,16 +14,16 @@ suppressMessages(library(BisqueRNA))
 suppressMessages(library(FARDEEP))
 suppressMessages(library(EpiDISH))
 
-# === 参数解析封装修改：接收来自 Bash 脚本的输入输出参数 ===
+# === Parameter parsing update: accept input and output arguments from the Bash script ===
 args <- commandArgs(trailingOnly = TRUE)
-input_rds <- args[1]   # 对应 Bash 中的 $DEFAULT_REF_RDS (单细胞参考集)
-output_dir <- args[2]  # 对应 Bash 中的 $DEFAULT_OUTPUT_DIR (统一输出根目录，承接2.1的输出)
+input_rds <- args[1]   # corresponds to $DEFAULT_REF_RDS in Bash (single-cell reference dataset)
+output_dir <- args[2]  # corresponds to $DEFAULT_OUTPUT_DIR in Bash (shared output root directory containing the output from step 2.1)
 # ========================================================
 
 source('/faststorage/project/cattle_gtexs/Deconvolution/Cattle/Pseudo/MammaryGland/method_benchmark/cibersort.R')
 
-# 修改你原本代码中的硬编码读取和写入位置：
-# === 路径修改：使用 Bash 传入的 input_rds 替代硬编码路径 ===
+# Replace the hard-coded input and output paths in the original code:
+# === Path update: use input_rds passed from the Bash script instead of a hard-coded path ===
 sc <- readRDS(input_rds)
 # ========================================================
 
@@ -145,7 +145,7 @@ rownames(phenoData) <- gsub("/",".",rownames(phenoData))
 phenoData <- droplevels(phenoData)
 
 ##deconvolution pipeline
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录 ===
+# === Path update: dynamically set the working directory using output_dir passed from the Bash script ===
 setwd(file.path(output_dir, "Binorm_Fraction", "random_pseudo"))
 # ===========================================================
 getwd()
@@ -154,63 +154,63 @@ file <- file[-10]
 list0 <- tools::file_path_sans_ext(file)
 list1<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "MuSic"), recursive = TRUE, showWarnings = FALSE)
   list1[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "MuSic", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list2<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "CDSeq"), recursive = TRUE, showWarnings = FALSE)
   list2[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "CDSeq", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list3<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Cibersort"), recursive = TRUE, showWarnings = FALSE)
   list3[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Cibersort", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list4<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "DeconRNASeq"), recursive = TRUE, showWarnings = FALSE)
   list4[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "DeconRNASeq", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list5<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "SCDC"), recursive = TRUE, showWarnings = FALSE)
   list5[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "SCDC", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list6<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "MuSic_marker"), recursive = TRUE, showWarnings = FALSE)
   list6[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "MuSic_marker", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list7<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Bisque"), recursive = TRUE, showWarnings = FALSE)
   list7[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Bisque", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list8<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "EpiDISH"), recursive = TRUE, showWarnings = FALSE)
   list8[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "EpiDISH", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list9<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "FARDEEP"), recursive = TRUE, showWarnings = FALSE)
   list9[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "FARDEEP", paste0("Predict_", i, ".csv"))
   # ===========================================================
@@ -284,7 +284,7 @@ for (i in 1:length(list0)) {
 
 
 ##normal distribution
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录 ===
+# === Path update: dynamically set the working directory using output_dir passed from the Bash script ===
 setwd(file.path(output_dir, "Normal_Fraction", "random_pseudo"))
 # ===========================================================
 getwd()
@@ -293,56 +293,56 @@ file <- file[-4]
 list0 <- tools::file_path_sans_ext(file)
 list1<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "MuSic"), recursive = TRUE, showWarnings = FALSE)
   list1[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "MuSic", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list2<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "CDSeq"), recursive = TRUE, showWarnings = FALSE)
   list2[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "CDSeq", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list3<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "Cibersort"), recursive = TRUE, showWarnings = FALSE)
   list3[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "Cibersort", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list4<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "DeconRNASeq"), recursive = TRUE, showWarnings = FALSE)
   list4[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "DeconRNASeq", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list5<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "SCDC"), recursive = TRUE, showWarnings = FALSE)
   list5[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "SCDC", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list6<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "MuSic_marker"), recursive = TRUE, showWarnings = FALSE)
   list6[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "MuSic_marker", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list7<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo", "Bisque"), recursive = TRUE, showWarnings = FALSE)
   list7[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", "Bisque", paste0("Predict_", i, ".csv"))
   # ===========================================================
 }
 list8<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径并创建所需子目录 ===
+  # === Path update: dynamically construct output paths using output_dir passed from the Bash script and create the required subdirectories ===
   dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Bisque"), recursive = TRUE, showWarnings = FALSE)
   list8[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", "Bisque", paste0("Predict_", i, ".csv"))
   # ===========================================================
@@ -415,15 +415,15 @@ for (i in 1:length(list0)) {
 
 
 ##uniform distribution
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录 ===
+# === Path update: dynamically set the working directory using output_dir passed from the Bash script ===
 setwd(file.path(output_dir, "Uniform_Fraction"))
 # ===========================================================
 sc <- read.table("sc_ref.txt", sep = "\t", row.names = 1, header = T)
 marker <- unique(rownames(sc))
-# === 路径修改：将硬编码根目录替换为由 output_dir 拼接的动态路径 ===
+# === Path update: replace the hard-coded root directory with a dynamic path constructed from output_dir ===
 str <- paste0(file.path(output_dir, "Uniform_Fraction"), "/")
 # ===========================================================
-# === 路径修改：统一改为读取 2.1 脚本生成的真实位置（random_pseudo/pseudo.txt）===
+# === Path update: read from the actual location generated by the step 2.1 script (random_pseudo/pseudo.txt)===
 pseudo <- read.csv("random_pseudo/pseudo.txt", sep = "\t", row.names = 1)
 # ===========================================================
 #common_genes <- intersect(rownames(counts), rownames(pseudo))
@@ -439,13 +439,13 @@ res1 = music_prop(bulk.mtx = pseudo2, # bulk exp
                             sc.sce = sce, # scRNAseq obj
                             clusters = 'cellType',  # cluster column
                             samples = 'sampleID', markers = NULL, normalize = FALSE, verbose = TRUE)$Est.prop.weighted
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "MuSic_ref"), recursive = TRUE, showWarnings = FALSE)
 write.csv(res1, paste0(str, "MuSic_ref/Predict_Fraction_pseudo.csv"))
 # ===========================================
 
 ##CDSeq
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "CDSeq"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 res2 <- CDSeq(bulk_data = pseudo, reference_gep = fenleimean, cell_type_number = ncol(fenleimean), mcmc_iterations = 1000, block_number = 6, gene_subset_size=15)
@@ -453,15 +453,15 @@ res2 <- t(res2$estProp)
 write.csv(res2, paste0(str, "CDSeq/Predict_CDSeq.csv"))
 
 ##Cibersort
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "Cibersort"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
-# === 注意：此处保持你原脚本中的 'sc_ref_cpm.txt' 和 'pseudo_simbu_cpm.txt' 未变 ===
+# === Note: keep 'sc_ref_cpm.txt' and 'pseudo_simbu_cpm.txt' unchanged from the original script ===
 res3 <- CIBERSORT('sc_ref_cpm.txt', "pseudo_simbu_cpm.txt", perm = 1000, QN = T)
 write.csv(res3, paste0(str, "Cibersort/Predict_Fraction_pseudo.csv"))
 
 ##DeconRNASeq
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "DeconRNASeq"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 res4 <- DeconRNASeq(datasets = pseudo, signatures = sc, proportions = NULL, checksig = FALSE, known.prop = FALSE, use.scale = TRUE, fig = FALSE)
@@ -470,7 +470,7 @@ rownames(res4) <- paste0("sample", c(1:1000))
 write.csv(res4, paste0(str, "DeconRNASeq/Predict_Fraction_pseudo.csv"))
 
 ##SCDC
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "SCDC"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 counts <- as.matrix(counts)
@@ -480,7 +480,7 @@ res5 <- t(res5)
 write.csv(res5, paste0(str, "SCDC/Predict_SCDC.csv"))
 
 ##MuSic_marker
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "MuSic_marker"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 res6 = music_prop(bulk.mtx = pseudo2, # bulk exp
@@ -490,7 +490,7 @@ res6 = music_prop(bulk.mtx = pseudo2, # bulk exp
 write.csv(res6, paste0(str, "MuSic_marker/Predict_Fraction_pseudo.csv"))
 
 ##Bisque
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "Bisque"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 counts <- as.matrix(counts)
@@ -505,14 +505,14 @@ res7 <- BisqueRNA::ReferenceBasedDecomposition(pseudo1, sce)$bulk.props
 write.csv(res7, paste0(str, "Bisque/Predict_Fraction_pseudo.csv"))
 
 ##EpiDISH
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "EpiDISH"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 res8 <- t(EpiDISH::epidish(beta.m = pseudo, ref.m = fenleimean, method = "RPC")$estF)
 write.csv(res8, paste0(str, "EpiDISH/Predict_Fraction_pseudo.csv"))
 
 ##FARDEEP
-# === 路径修改：动态创建输出子目录以防写入失败 ===
+# === Path update: dynamically create the output subdirectory to prevent write failures ===
 dir.create(paste0(str, "FARDEEP"), recursive = TRUE, showWarnings = FALSE)
 # ===========================================
 res9 <- fardeep(fenleimean, pseudo, nn = TRUE, intercept = TRUE, permn = 10, QN = FALSE)
