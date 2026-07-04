@@ -13,7 +13,7 @@
 #SBATCH -t 10:00:00              # Job max time - Format = MM or MM:SS or HH:MM:SS or DD-HH or DD-HH:MM
 
 # =========================================================================
-# 路径修改：由总控 Bash 脚本分发过来的全局环境变量接管，彻底脱离硬编码
+# Path update: controlled by global environment variables exported from the master Bash script, fully removing hard-coded paths
 # =========================================================================
 dir_nominal="${NOMINAL_DIR}"
 dir_output="${OUTPUT_DIR}"
@@ -32,7 +32,7 @@ do
 }
 done
 
-# 路径修改：动态调用指定目录下的 python 脚本
+# Path update: dynamically call the Python script from the specified directory
 python3 ${SCRIPT_DIR}/combine_signif_pairs_tjy.py ${dir_output}/permutation_files.txt strong_pairs -o ${dir_output}
 
 
@@ -57,7 +57,7 @@ do
     }
     done
     # extract_pairs
-    # 路径修改：动态调用指定目录下的 python 脚本
+    # Path update: dynamically call the Python script from the specified directory
     python3 ${SCRIPT_DIR}/extract_pairs_tjy.py ${dir_output}/${name}.nominal_files.txt ${dir_output}/strong_pairs.combined_signifpairs.txt.gz ${name} -o ${dir_output}
     ### output file: *.extracted_pairs.txt.gz
     # rm -f ${dir_output}/${name}.nominal_files.txt
@@ -76,12 +76,8 @@ do
 }
 done
 # MashR format file (z-score)
-# 路径修改：动态调用指定目录下的 python 脚本
+# Path update: dynamically call the Python script from the specified directory
 python3 ${SCRIPT_DIR}/mashr_prepare_input.py ${dir_output}/strong_pairs_files.txt strong_pairs -o ${dir_output} --only_zscore
 zcat ${dir_output}/strong_pairs.MashR_input.txt.gz | sed -e 's/_zval//g' | gzip > ${dir_output}/strong_pairs.temp.txt.gz
 rm -f ${dir_output}/strong_pairs.MashR_input.txt.gz
 mv ${dir_output}/strong_pairs.temp.txt.gz ${dir_output}/strong_pairs.MashR_input.txt.gz
-
-# =========================================================================
-# 安全修改：彻底删除原代码末尾可能引发误删根目录的集群清理指令
-# =========================================================================
