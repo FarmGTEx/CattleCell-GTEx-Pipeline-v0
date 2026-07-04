@@ -3,18 +3,17 @@
 library(data.table)
 "%&%" = function(a,b) paste0(a,b)
 
-# 保留原版基于位置的参数接收逻辑
+# Preserve the original positional argument parsing logic
 ARGS <- commandArgs(trailingOnly = TRUE)
 dir_output = ARGS[1]
 subset_size = as.numeric(ARGS[2])
 
 DF_all_pairs = NULL
-# 完全保留原版的 1:18 染色体大循环，不做任何外延
-for (CHR in 1:18){
+
+for (CHR in 1:29){
     message(CHR)
     tmp = fread(dir_output %&% "/nominal_pairs_Chr" %&% CHR %&% ".MashR_input.txt.gz",sep="\t",nThread=20)
     colnames(tmp) = gsub("_Chr(.)*.nominal_pairs_zval","",colnames(tmp))
-    # 完全保留原版的 rbind 堆叠逻辑
     DF_all_pairs = rbind(DF_all_pairs, tmp)
 }
 
