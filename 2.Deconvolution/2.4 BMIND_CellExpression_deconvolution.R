@@ -6,15 +6,15 @@ library(parallel)
 library(SeuratObject)
 library(tibble)
 
-# === 参数解析封装修改：引入外部参数，但保留脚本内部原有的批量循环逻辑 ===
+# === Parameter parsing update: introduce external arguments while preserving the original batch-loop logic within the script ===
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
+  stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
-PROJECT_DIR <- args[1] # 对应 Bash 中的 $BASE_PROJECT 路径
+PROJECT_DIR <- args[1] # Corresponds to the $BASE_PROJECT path in the Bash script
 # ====================================================================
 
-# === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+# === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
 path <- file.path(PROJECT_DIR, "Deconvolution/Cattle/Bulk/Results_DWLS/")
 # ============================================================
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -22,7 +22,7 @@ tissue <- sapply(tissue, function(x) unlist(strsplit(x, "\\/"))[10])
 tissue <- data.frame(tissue)
 tissue_sc <- tissue$tissue
 #bulk
-# === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+# === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
 path <- file.path(PROJECT_DIR, "CattleGTEx/OmiGA/eQTL/")
 # ============================================================
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -35,26 +35,26 @@ tissue <- intersect(tissue_sc, tissue_bulk)
 #bulk
 list1<-NULL
 for(i in tissue){
-  # === 路径修改：使用 PROJECT_DIR 替换硬编码 ===
+  # === Path update: use PROJECT_DIR instead of a hard-coded path ===
   list1[[i]]<-paste0(PROJECT_DIR, "/Global_atlas/Global_cell_atlas/celltype_annotation/", i, "_anno.rds")
 }
 list2<-NULL
 for(i in tissue){
-  # === 路径修改：使用 PROJECT_DIR 替换硬编码 ===
+  # === Path update: use PROJECT_DIR instead of a hard-coded path ===
   list2[[i]]<-paste0(PROJECT_DIR, "/CattleGTEx/Cattle_bulk_exp/Bulk_", i, ".txt")
 }
 list3<-NULL
 for(i in tissue){
-  # === 路径修改：使用 PROJECT_DIR 替换硬编码 ===
+  # === Path update: use PROJECT_DIR instead of a hard-coded path ===
   list3[[i]]<-paste0(PROJECT_DIR, "/Deconvolution/Cattle/Bulk/Results_DWLS/", i, "/Results/Predict_", i, "_DWLS.csv")
 }
 list4<-NULL
 for(i in tissue){
-  # === 路径修改：使用 PROJECT_DIR 替换硬编码 ===
+  # === Path update: use PROJECT_DIR instead of a hard-coded path ===
   list4[[i]]<-paste0(PROJECT_DIR, "/Deconvolution/Cattle/Bulk/Result_bMIND/", i, "2_bMIND.RData")
 }
 
-# === 路径修改：使用 PROJECT_DIR 替换硬编码 ===
+# === Path update: use PROJECT_DIR instead of a hard-coded path ===
 gene_id <- read.csv(file.path(PROJECT_DIR, "reference/cattle_genes.csv"), row.names = 1)
 # ========================================================================
 gene_id <- na.omit(gene_id)
@@ -128,7 +128,7 @@ for (k in 1:length(tissue)) {
   colnames(bulk) = rownames(frac) = paste0('s', 1:nrow(frac))
   colnames(frac) = colnames(fenleimean) = paste0('c', 1:ncol(frac))
   
-  # === 路径修改：确保保存输出时自动创建其父目录以防报错 ===
+  # === Path update: automatically create the parent directory before saving output to prevent errors ===
   dir.create(dirname(list4[[k]]), recursive = TRUE, showWarnings = FALSE)
   # =====================================================
   
