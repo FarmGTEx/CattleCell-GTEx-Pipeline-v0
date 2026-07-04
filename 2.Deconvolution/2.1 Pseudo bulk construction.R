@@ -4,14 +4,14 @@ suppressMessages(library(doParallel))
 suppressMessages(library(dplyr))
 suppressMessages(library(FamilyRank))
 
-# === 参数解析封装修改：接收来自 Bash 脚本的输入输出参数 ===
+# === # Refactor parameter parsing to accept input and output arguments from the Bash script ===
 args <- commandArgs(trailingOnly = TRUE)
 input_rds <- args[1]   # 对应 Bash 中的 $DEFAULT_INPUT_RDS
 output_dir <- args[2]  # 对应 Bash 中的 $DEFAULT_OUTPUT_DIR
 gtf_path <- args[3]    # 对应 Bash 中的 $GTF_REFERENCE
 # ========================================================
 
-# === 路径修改：使用 Bash 传入的 input_rds 替代硬编码路径 ===
+# === Path update: use input_rds passed from the Bash script instead of a hard-coded path ===
 sc <- readRDS(input_rds)
 # ========================================================
 
@@ -22,7 +22,7 @@ Idents(sc) <- "CellType"
 counts <- data.frame(sc@assays$RNA@counts)
 
 ### TPM  
-# === 路径修改：使用 Bash 传入的 gtf_path 替代硬编码路径 ===
+# === Path update: use gtf_path passed from the Bash script instead of a hard-coded path ===
 gtf = rtracklayer::import(gtf_path)
 # ========================================================
 class(gtf)
@@ -129,7 +129,7 @@ for (i in 1:length(sd1)) {
     } 
     rownames(fraction) <- paste0("cell", c(1:20))
     colnames(fraction) <- paste0("sample", c(1:1000))
-    # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径 ===
+    # === Path update: use output_dir passed from the Bash script instead of a hard-coded path ===
     dir.create(file.path(output_dir, "Binorm_Fraction"), recursive = TRUE, showWarnings = FALSE)
     write.csv(fraction, file.path(output_dir, "Binorm_Fraction", paste0("Fraction_", sd1[[i]], "_", sd2[[j]], ".csv"))) 
     # ===========================================================
@@ -137,19 +137,19 @@ for (i in 1:length(sd1)) {
 }
 
 #produce pseudo bulk expression
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录 ===
+# === Path update: use output_dir passed from the Bash script instead of a hard-coded path ===
 setwd(file.path(output_dir, "Binorm_Fraction"))
 # ===========================================================
 file <- list.files(pattern = ".csv")
 list0 <- tools::file_path_sans_ext(file)
 list1<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径 ===
+  # === Path update: use output_dir passed from the Bash script instead of a hard-coded path ===
   list1[[i]]<-file.path(output_dir, "Binorm_Fraction", "random_pseudo", paste0(i, "_pseudo.txt"))
   # ===========================================================
 }
 
-# === 路径修改：自动创建 random_pseudo 目录以防写入失败 ===
+# === Path update: automatically create the random_pseudo directory to prevent write failures ===
 dir.create(file.path(output_dir, "Binorm_Fraction", "random_pseudo"), recursive = TRUE, showWarnings = FALSE)
 # =====================================================
 
@@ -185,26 +185,26 @@ for (i in 1:length(sd)) {
   }
   rownames(fraction) <- paste0("cell", c(1:20))
   colnames(fraction) <- paste0("sample", c(1:1000))
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径 ===
+  # === Path update: dynamically construct the output path using output_dir passed from the Bash script ===
   dir.create(file.path(output_dir, "Normal_Fraction"), recursive = TRUE, showWarnings = FALSE)
   write.csv(fraction, file.path(output_dir, "Normal_Fraction", paste0("Fraction_sd_", sd[[i]], ".csv"))) 
   # ===========================================================
 }
 
 #produce pseudo bulk expression
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录 ===
+# === Path update: dynamically set the working directory using output_dir passed from the Bash script ===
 setwd(file.path(output_dir, "Normal_Fraction"))
 # ===========================================================
 file <- list.files(pattern = ".csv")
 list0 <- tools::file_path_sans_ext(file)
 list1<-NULL
 for(i in list0){
-  # === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径 ===
+  # === Path update: dynamically construct the output path using output_dir passed from the Bash script ===
   list1[[i]]<-file.path(output_dir, "Normal_Fraction", "random_pseudo", paste0(i, "_pseudo.txt"))
   # ===========================================================
 }
 
-# === 路径修改：自动创建 random_pseudo 目录以防写入失败 ===
+# === Path update: automatically create the random_pseudo directory to prevent write failures ===
 dir.create(file.path(output_dir, "Normal_Fraction", "random_pseudo"), recursive = TRUE, showWarnings = FALSE)
 # =====================================================
 
@@ -238,13 +238,13 @@ for (k in 1:1000) {
 }
 rownames(fraction) <- paste0("cell", c(1:20))
 colnames(fraction) <- paste0("sample", c(1:1000))
-# === 路径修改：使用 Bash 传入的 output_dir 动态拼接输出路径 ===
+# === Path update: dynamically construct the output path using output_dir passed from the Bash script ===
 dir.create(file.path(output_dir, "Uniform_Fraction"), recursive = TRUE, showWarnings = FALSE)
 write.csv(fraction, file.path(output_dir, "Uniform_Fraction", "Farction.csv"))
 # ===========================================================
 
 #produce pseudo bulk expression
-# === 路径修改：使用 Bash 传入的 output_dir 动态切换工作目录与拼接输出路径 ===
+# === Path update: dynamically set the working directory and construct output paths using output_dir passed from the Bash script ===
 setwd(file.path(output_dir, "Uniform_Fraction"))
 pseudo <- array(data = NA,dim = c(nrow(fenleimean),1000))
 fraction <- read.csv("Farction.csv", row.names = 1) # 统一修正对应上文写入的 Farction.csv
