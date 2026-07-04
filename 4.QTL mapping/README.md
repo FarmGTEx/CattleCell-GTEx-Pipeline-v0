@@ -1,115 +1,135 @@
 ========================================================================
-             QTL Mapping 自动化分析管道 (Pipeline) 使用说明书
+                     QTL Mapping Pipeline User Guide
 ========================================================================
 
-一、 管道总体简介
-本管道是一套高度整合的表达量定量与多维 QTL（beQTL / cseQTL / ieQTL）关联映射
-分析工作流。全套流程由总控 Bash 脚本（run_qtl_pipeline.sh）顺序嵌套调用 3 个封装
-好的 R 脚本与 3 个 Mapping 控制 Bash 脚本。
-管道支持纯命令行长选项参数传递（--project_dir 等）、终端日志实时双向滚动、各分步
-模块运行状态码（Exit Code）监控以及致命错误自动化熔断。
+1. Pipeline Overview
 
-二、 文件结构规范
-交付与运行前，请确保以下脚本文件放置于服务器的同一个文件夹下：
-├── run_qtl_pipeline.sh                         # 命令行长参数总控脚本
-├── 3.1 Prepare for beQTL.R                     # 步骤 1：常规 beQTL 数据准备
-├── 3.2 beQTL mapping.sh                        # 步骤 2：常规 beQTL 关联映射
-├── 3.3 Prepare for cseQTL.R                    # 步骤 3：细胞特异性 cseQTL 准备
-├── 3.4 cseQTL mapping.sh                       # 步骤 4：细胞特异性 cseQTL 映射
-├── 3.5 Prepare for cell-type ieQTL.R           # 步骤 5：互作 ieQTL 数据准备
-└── 3.6 ieQTL mapping.sh                        # 步骤 6：互作 ieQTL 互作映射
+This pipeline is a highly integrated workflow for expression quantification and multidimensional QTL mapping, including beQTL, cseQTL, and ieQTL analyses. The complete workflow is controlled by a master Bash script (run_qtl_pipeline.sh), which sequentially executes three R scripts and three Bash scripts for QTL mapping.
 
-运行启动后，管道会自动在当前目录下创建：
-└── qtl_pipeline_logs/                          # 存放各模块运行时实时同步的日志目录
+The pipeline supports command-line long options (e.g., --project_dir), real-time terminal output with simultaneous log recording, exit-code monitoring for each module, and automatic fail-fast termination upon fatal errors.
 
-三、 各分步模块功能详述、改动说明与逻辑死穴修复
 
-------------------------------------------------------------------------
-[步骤 1] 3.1 Prepare for beQTL.R
-------------------------------------------------------------------------
-- 核心功能：
-  读取大样 Bulk Counts 和 TPM 矩阵，进行低丰度基因过滤。计算 TMM 标准化因子与
-  反分位数正态转化（Inverse Normal Transformation），最终利用物种 GTF 注释文件
-  构建标准的 beQTL 表型 BED 矩阵。
-- 逻辑死穴修复与改动：
-  1. 【修复致命死穴 1】原版代码第 72 行忽然出现未定义变量 `region_annot <- gtf`，
-     但前文根本没有任何读入或声明 `gtf` 的语句，直接单步运行必报 
-     `object 'gtf' not found` 崩溃。现已在顶部引入 `rtracklayer::import(opt$gtf_file)`
-     物理读入基因组注释并转换为数据框，彻底修复此崩溃。
-  2. 【修复致命死穴 2】原代码在开头使用 `list.files(pattern = ".txt")` 盲目扫描
-     当前工作目录，如果该目录下有其他无用文本会导致分析流严重污染。现已改为精准
-     扫描指定的项目大基座目录。
-  3. 【接口封装】彻底重构为 optparse 参数控制，移除所有绝对路径硬编码。
+2. File Structure
+
+Before deployment and execution, ensure that the following scripts are placed in the same directory on the server:
+
+├── run_qtl_pipeline.sh                         # Master command-line pipeline script
+├── 3.1 Prepare for beQTL.R                     # Step 1: Data preparation for beQTL analysis
+├── 3.2 beQTL mapping.sh                        # Step 2: beQTL mapping
+├── 3.3 Prepare for cseQTL.R                    # Step 3: Data preparation for cseQTL analysis
+├── 3.4 cseQTL mapping.sh                       # Step 4: cseQTL mapping
+├── 3.5 Prepare for cell-type ieQTL.R           # Step 5: Data preparation for ieQTL analysis
+└── 3.6 ieQTL mapping.sh                        # Step 6: ieQTL mapping
+
+Once the pipeline starts, the following directory will be automatically created in the current working directory:
+
+└── qtl_pipeline_logs/                          # Real-time runtime logs for each module
+
+
+3. Detailed Description, Modifications, and Critical Fixes for Each Module
 
 ------------------------------------------------------------------------
-[步骤 2] 3.2 beQTL mapping.sh
+[Step 1] 3.1 Prepare for beQTL.R
 ------------------------------------------------------------------------
-- 核心功能：
-  利用上游 3.1 生成的压缩表型 BED 文件和基因型数据，循环遍历各组织，调用 omiga 
-  生信软件进行顺式常规 eQTL 线性混合模型（LMM）关联映射。
-- 改动与衔接说明：
-  未对原作者脚本内部的 `omiga` 运行参数做任何阉割或修改。仅在总控脚本中通过 
-  `export` 关键字在系统内存中动态发布了 `MAIN_DIR` 环境变量，接管了原本写死的
-  `main_dir` 路径前缀，实现了零改动原代码逻辑下的外部参数自由指定。
+
+- Core function:
+
+  Reads bulk RNA-seq count and TPM matrices and filters low-abundance genes. It then calculates TMM normalization factors and performs inverse normal transformation. Finally, a standard beQTL phenotype BED matrix is constructed using the species-specific GTF annotation file.
+
+- Critical fixes and modifications:
+
+  1. [Critical fix 1] In the original script, the undefined variable `gtf` was unexpectedly used in `region_annot <- gtf` at line 72, although no GTF file had been loaded or defined beforehand. Running the script independently therefore resulted in an `object 'gtf' not found` error. The updated script now imports the genome annotation using `rtracklayer::import(opt$gtf_file)` and converts it to a data frame, resolving this issue.
+
+  2. [Critical fix 2] The original script used `list.files(pattern = ".txt")` to scan the current working directory without restriction. Unrelated text files in the directory could therefore be incorrectly included in the analysis. The updated script now scans the specified project directory directly.
+
+  3. [CLI wrapper] The script has been refactored to use optparse-based command-line arguments, with all hard-coded absolute paths removed.
+
 
 ------------------------------------------------------------------------
-[步骤 3] 3.3 Prepare for cseQTL.R
+[Step 2] 3.2 beQTL mapping.sh
 ------------------------------------------------------------------------
-- 核心功能：
-  加载上游贝叶斯反推出来的 bMIND 细胞特异性多维 RData，按细胞类型进行矩阵剥离。
-  随后重新利用 GTF 计算外显子累加长度，执行 TMM 标准化与逆正态转化，构建细胞特
-  异性（Cell-type specific）的 cseQTL 分析 BED 表型输入。
-- 逻辑死穴修复与改动：
-  1. 【修复手误笔误 1】原代码第 12 行循环时出现未定义变量 `for (j in 1:dim(dat1)[2])`，
-     但前文正文加载后得到的矩阵明明是 `dat`，属于明显的笔误。现已修正为 `dim(dat)[2]`
-     并引入多维数组对齐，彻底修复由此导致的循环闪退崩溃。
-  2. 【接口封装】引入 `--project_dir` 和 `--gtf_file` 控制，所有中间缓存文件夹 
-     `CT_exp` 和落盘路径全部实现动态对齐。
+
+- Core function:
+
+  Uses the compressed phenotype BED files generated in Step 3.1 together with genotype data to perform conventional cis-eQTL mapping across tissues using the linear mixed model (LMM) implemented in omiga.
+
+- Modifications and workflow integration:
+
+  The original omiga parameters were fully preserved without modification. The master script dynamically exports the `MAIN_DIR` environment variable, replacing the original hard-coded `main_dir` path prefix and allowing the project path to be specified externally without changing the core mapping logic.
+
 
 ------------------------------------------------------------------------
-[步骤 4] 3.4 cseQTL mapping.sh
+[Step 3] 3.3 Prepare for cseQTL.R
 ------------------------------------------------------------------------
-- 核心功能：
-  对多组织、多细胞类型的嵌套子目录进行双重深度遍历，精准匹配基因型，调用 omiga 
-  进行顺式细胞特异性 eQTL 的混合线性映射。
-- 改动与衔接说明：
-  完全保留了原作者的目录双重深层匹配架构。通过在控制端外层向系统发布 
-  `MAIN_DIR_CSE` 与 `GENO_DIR_CSE` 环境变量，无缝接管了其内部所有的绝对寻址。
+
+- Core function:
+
+  Loads the multidimensional bMIND RData containing deconvolution-derived cell-type-specific expression and extracts expression matrices for individual cell types. It then calculates cumulative exon lengths from the GTF annotation, performs TMM normalization and inverse normal transformation, and constructs cell-type-specific phenotype BED files for cseQTL analysis.
+
+- Critical fixes and modifications:
+
+  1. [Critical fix 1] The original script contained an undefined variable in the loop `for (j in 1:dim(dat1)[2])`, although the loaded multidimensional array was named `dat`. This apparent typographical error caused the loop to fail. The variable has been corrected to `dim(dat)[2]`, with multidimensional array alignment retained.
+
+  2. [CLI wrapper] The `--project_dir` and `--gtf_file` options were introduced. All intermediate directories, including `CT_exp`, and downstream output paths are now dynamically constructed.
+
 
 ------------------------------------------------------------------------
-[步骤 5] 3.5 Prepare for cell-type ieQTL.R
+[Step 4] 3.4 cseQTL mapping.sh
 ------------------------------------------------------------------------
-- 核心功能：
-  读取 DWLS 预测得到的细胞成分比例矩阵，剔除低质量样本及零值比例超过 80% 的细胞
-  类型。使用【均值 ± 3倍标准差（3*SD）】的统计学原则过滤离群值，最终输出细胞互作
-  分析 ieQTL 所需的表型 BED 以及细胞比例 Interaction 文本。
-- 改动说明：
-  全面重构了路径控制。将原作者写死的 `/faststorage/project/cattle_gtexs` 彻底
-  替换为基于系统级变量统一控制的路径，并确保上下游流转的数据矩阵列名（Sample ID）
-  能够物理对齐。
+
+- Core function:
+
+  Performs nested traversal of tissue- and cell-type-specific subdirectories, matches the corresponding genotype data, and uses omiga to perform cis cell-type-specific eQTL mapping with a linear mixed model.
+
+- Modifications and workflow integration:
+
+  The original nested directory traversal structure was fully preserved. The master script exports the `MAIN_DIR_CSE` and `GENO_DIR_CSE` environment variables, which dynamically replace all internal hard-coded absolute paths.
+
 
 ------------------------------------------------------------------------
-[步骤 6] 3.6 ieQTL mapping.sh
+[Step 5] 3.5 Prepare for cell-type ieQTL.R
 ------------------------------------------------------------------------
-- 核心功能：
-  遍历各组织的细胞互作子目录，通过参数 `--interaction` 喂入对应的细胞成分比例作为
-  协变量，启动 omiga 软件的 `cis_interaction` 互作 eQTL 模式。
-- 改动与衔接说明：
-  无需物理修改。通过总控端发送的 `MAIN_DIR_IE` 环境变量接管寻址，完美配合上游 3.5 
-  产出的互作矩阵进行统计学求解。
 
-四、 运行时环境与故障排查（日志双写机制）
-1. 终端与日志双写（Tee 机制）：
-   管道采用 Linux 工业级管道双写（eval ... 2>&1 | tee ）。运行流程时，屏幕上会实时
-   像单步运行一样滚动更新 edgeR 标准化、TMM计算、bgzip 压缩以及 omiga 关联映射的
-   详细日志，同时异步将其写入 `qtl_pipeline_logs/` 供后期留底。
-2. 状态码（Exit Code）监控与流程安全熔断：
-   总控脚本基于高级的 PIPESTATUS 机制。只要中途任何一个 R 脚本或者 omiga 运算抛出 
-   Error 崩溃，Bash 控制端会【立刻锁死并强行终止整个流】，不会向下盲目流转空数据或
-   错误数据。流程中断时会在终端屏幕上显式打印具体的非零【错误码（Exit Code）】，
-   运维交付时极易排查。
+- Core function:
 
-五、 管道终端一键调用实例命令
+  Reads cell-type proportion matrices predicted by DWLS and removes low-quality samples and cell types with more than 80% zero proportions. Outliers are filtered using the mean ± 3 standard deviations (3 × SD) criterion. The script then generates the phenotype BED files and cell-proportion interaction files required for ieQTL analysis.
+
+- Modifications:
+
+  Path handling was comprehensively refactored. The original hard-coded `/faststorage/project/cattle_gtexs` path was replaced with dynamically controlled project paths, while sample IDs across upstream and downstream data matrices are aligned consistently.
+
+
+------------------------------------------------------------------------
+[Step 6] 3.6 ieQTL mapping.sh
+------------------------------------------------------------------------
+
+- Core function:
+
+  Traverses the cell-type interaction subdirectories for each tissue and supplies the corresponding cell-type proportions through the `--interaction` parameter to run the `cis_interaction` mode in omiga.
+
+- Modifications and workflow integration:
+
+  No changes to the core mapping script were required. The `MAIN_DIR_IE` environment variable exported by the master script dynamically controls path resolution and enables direct integration with the interaction matrices generated in Step 3.5.
+
+
+4. Runtime Environment and Troubleshooting
+
+1. Real-time terminal and log output (tee mechanism):
+
+   The pipeline uses the standard Linux dual-output mechanism:
+
+   eval ... 2>&1 | tee
+
+   During execution, detailed logs from edgeR normalization, TMM calculation, bgzip compression, and omiga association mapping are displayed in real time in the terminal. The same output is simultaneously written to the `qtl_pipeline_logs/` directory for troubleshooting and archival purposes.
+
+2. Exit-code monitoring and fail-fast termination:
+
+   The master script uses the PIPESTATUS mechanism to capture the actual exit code of each R script and omiga process. If any module terminates with an error, the Bash controller immediately stops the entire workflow, preventing empty, incomplete, or invalid data from being passed to downstream steps.
+
+   When the pipeline is terminated, the corresponding non-zero exit code is explicitly displayed in the terminal, facilitating troubleshooting, deployment, and maintenance.
+
+
+5. Example Command for Running the Complete Pipeline
 
 bash run_qtl_pipeline.sh \
   --project_dir "/faststorage/project/cattle_gtexs" \
