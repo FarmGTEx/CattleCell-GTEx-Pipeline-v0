@@ -8,17 +8,17 @@ suppressMessages(library(mclust))
 suppressMessages(library(MeDuSA))
 library(RColorBrewer)
 
-# === 参数解析封装修改：引入外部参数，但保留脚本内部原有的批量循环逻辑 ===
+# === Parameter parsing update: introduce external arguments while preserving the original batch-loop logic within the script ===
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
+  stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
-PROJECT_DIR <- args[1] # 对应 Bash 中的 $BASE_PROJECT 路径
+PROJECT_DIR <- args[1] # Corresponds to the $BASE_PROJECT path in the Bash script
 # ====================================================================
 
 ## cell trajectory
 #load sc data
-# === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+# === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
 path <- file.path(PROJECT_DIR, "CattleGTEx/OmiGA/eQTL/")
 # ============================================================
 tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
@@ -27,7 +27,7 @@ tissue <- data.frame(tissue)
 tissue <- tissue$tissue
 
 for (k in 1:length(tissue)) { 
-  # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+  # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
   sc <- readRDS(paste0(PROJECT_DIR, "/Global_atlas/Global_cell_atlas/celltype_annotation/", tissue[[k]], "_anno.rds"))
   # ============================================================
   Idents(sc) <- "CellType"
@@ -179,25 +179,25 @@ for (k in 1:length(tissue)) {
   ##medusa
   #sce$cell_trajectory <- (sce$cell_trajectory - min(sce$cell_trajectory)) / (max(sce$cell_trajectory) - min(sce$cell_trajectory))
   #sce@assays$RNA@counts = sweep(as.matrix(sce@assays$RNA@counts),2,colSums(sce@assays$RNA@counts),'/')*1e+3
-  # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+  # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
   bulk <- read.table(paste0(PROJECT_DIR, "/CattleGTEx/Cattle_bulk_exp/Bulk_", tissue[[k]], ".txt"), sep = "\t", row.names = 1, header = T)
   # ============================================================
   filtered_bulk <- na.omit(bulk)
   bulk1 = sweep(as.matrix(filtered_bulk),2,colSums(filtered_bulk),'/')*1e+3
-  # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+  # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
   setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state/"))
   # ============================================================
   if (!dir.exists(tissue[[k]])) {
     dir.create(tissue[[k]])
   }
   for (j in 1:length(ct)) {
-    # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+    # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
     setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state/", tissue[[k]]))
     # ============================================================
     if (!dir.exists(ct1[[j]])) {
       dir.create(ct1[[j]])
     }
-    # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+    # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
     setwd(paste0(PROJECT_DIR, "/CattleGTEx/OmiGA/Cell_state/", tissue[[k]], "/", ct1[[j]]))
     # ============================================================
     MeDuSA_obj = MeDuSA(bulk1,sce,
@@ -208,7 +208,7 @@ for (k in 1:length(tissue)) {
   }
 }
 
-# === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
+# === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
 sc <- readRDS(paste0(PROJECT_DIR, "/Global_atlas/Global_cell_atlas/celltype_annotation/", tissue[[k]], "_anno.rds"))
 # ============================================================
 Idents(sc) <- "CellType"
@@ -259,8 +259,8 @@ for (j in 1:length(ct)) {
   sce <- slingshot(sce, clusterLabels = 'GMM', reducedDim = 'PCA')
   colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
   plotcol <- colors[cut(sce$slingPseudotime_1, breaks=100)]
-  # === 路径修改：将写死的路径前缀替换为由参数传入的 PROJECT_DIR ===
-  # 自动创建父目录以防报错
+  # === Path update: replace the hard-coded path prefix with PROJECT_DIR passed as an argument ===
+  # Automatically create the parent directory to prevent errors
   mam_gland_dir <- paste0(PROJECT_DIR, '/CattleGTEx/OmiGA/Cell_state/MammaryGland/')
   dir.create(mam_gland_dir, recursive = TRUE, showWarnings = FALSE)
   tiff(filename = paste0(mam_gland_dir, ct[[j]], '.tiff'),width =1200,height=1000,res=300)
