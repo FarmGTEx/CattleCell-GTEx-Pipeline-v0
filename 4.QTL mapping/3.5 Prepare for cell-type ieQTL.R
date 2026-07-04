@@ -9,10 +9,10 @@ suppressMessages(library(dplyr))
 suppressMessages(library(optparse))   # 引入命令行解析包
 
 # ====================================================================
-# 1. 命令行参数解析 (CLI 封装)
+# 1. Command-line argument parsing (CLI wrapper)
 # ====================================================================
 option_list = list(
-  make_option(c("-p", "--project_dir"), type="character", default=NULL, help="项目大基座根目录路径")
+  make_option(c("-p", "--project_dir"), type="character", default=NULL, help="Project root directory path")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -20,11 +20,11 @@ opt = parse_args(opt_parser)
 
 if (is.null(opt$project_dir)){
   print_help(opt_parser)
-  stop("错误: 必须通过 --project_dir 指定项目路径！", call.=FALSE)
+  stop("Error: both --project_dir and --gtf_file must be provided to specify the input path and reference genome！", call.=FALSE)
 }
 
 # ====================================================================
-# 2. 扫描组织并构建路径对齐
+# 2. Scan tissues and construct aligned paths
 # ====================================================================
 #extract cell components and corresponding expression matrix
 path <- file.path(opt$project_dir, "Deconvolution/Cattle/Bulk/Results_DWLS/")
@@ -51,12 +51,12 @@ for(i in tissue){
 }
 list3<-NULL
 for(i in tissue){
-  # 动态流转对接统一输出格式
+  # Dynamically link to the standardized output format
   list3[[i]]<-paste0(opt$project_dir, "/Deconvolution/Cattle/Bulk/Results_DWLS/", i, "/Results/Predict_", i, "_DWLS.csv")
 }
 
 # ====================================================================
-# 3. 过滤低质量细胞类型与样本大循环 (原始计算逻辑保持不变)
+# 3. Loop over cell types and samples to filter low-quality data
 # ====================================================================
 #remove low quality cell type and samples
 for (i in 1:length(tissue)) {
@@ -71,7 +71,7 @@ for (i in 1:length(tissue)) {
   frac2 <- frac1[, mean_pro >= 0.05]
   ct <- colnames(frac2)
   for (j in 1:length(ct)) {
-    # 自动创建 ieQTL 目标输出目录
+    # Automatically create the target output directory for ieQTL analysis
     dir.create(list2[[i]], recursive = TRUE, showWarnings = FALSE)
     setwd(list2[[i]])
     
