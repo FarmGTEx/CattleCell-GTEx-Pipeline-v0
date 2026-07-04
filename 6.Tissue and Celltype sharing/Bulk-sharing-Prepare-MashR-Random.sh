@@ -13,7 +13,7 @@
 #SBATCH -t 10:00:00              # Job max time - Format = MM or MM:SS or HH:MM:SS or DD-HH or DD-HH:MM
 
 # =========================================================================
-# 路径修改：由总控 Bash 脚本分发过来的全局环境变量接管，彻底脱离硬编码
+# Path update: controlled by global environment variables exported from the master Bash script, fully removing hard-coded paths
 # =========================================================================
 dir_nominal="${NOMINAL_DIR}"
 dir_output="${OUTPUT_DIR}"
@@ -30,7 +30,7 @@ do
 }
 done
 
-# 路径修改：动态调用指定目录下的 python 脚本
+# Path update: dynamically call the Python script from the specified directory
 python3 ${SCRIPT_DIR}/combine_signif_pairs_tjy.py ${dir_output}/nominal_combined_files.txt nominal_pairs -o ${dir_output}
 ### output file: nominal_pairs.combined_signifpairs.txt.gz
 rm -f ${dir_output}/nominal_combined_files.txt
@@ -57,7 +57,7 @@ do
     }
     done
     # extract_pairs
-    # 路径修改：动态调用指定目录下的 python 脚本
+    #Path update: dynamically call the Python script from the specified directory
     python3 ${SCRIPT_DIR}/extract_pairs_tjy.py ${dir_output}/${tissue}.nominal_files2.txt ${dir_output}/nominal_pairs.combined_signifpairs.txt.gz ${tissue}_nominal_pairs -o ${dir_output}
     #> output file: *_nominal_pairs.extracted_pairs.txt.gz
 }
@@ -67,7 +67,7 @@ wait
 
 ################################################################################################
 
-# 变量修改：如果上层没有分发，则使用默认的 1000000 
+# Variable update: use the default value of 1000000 if no value is provided by the upstream script
 if [ -z "$SUBSET_SIZE" ]; then
     subset_size=1000000
 else
@@ -84,11 +84,7 @@ do
 }
 done
 # MashR format file (z-score)
-# 路径修改：动态调用指定目录下的 python 脚本
+# Path update: dynamically call the Python script from the specified directory
 python3 ${SCRIPT_DIR}/mashr_prepare_input.py ${dir_output}/nominal_pairs_files.txt nominal_pairs.${subset_size}_subset -o ${dir_output} --only_zscore --dropna --subset $subset_size --seed 9823
 zcat ${dir_output}/nominal_pairs.${subset_size}_subset.MashR_input.txt.gz | sed -e 's/.nominal_pairs_zval//g' | gzip > ${dir_output}/nominal_pairs.${subset_size}_subset.temp.txt.gz
 mv ${dir_output}/nominal_pairs.${subset_size}_subset.temp.txt.gz ${dir_output}/nominal_pairs.${subset_size}_subset.MashR_input.txt.gz
-
-# =========================================================================
-# 安全熔断修改：彻底删除原代码末尾无保护的 rm -rf /scratch/$USER 删库死穴
-# =========================================================================
