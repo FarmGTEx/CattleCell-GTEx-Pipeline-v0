@@ -1,0 +1,165 @@
+options(stringsAsFactors = FALSE)
+suppressMessages(library(edgeR))
+suppressMessages(library(preprocessCore))
+suppressMessages(library(RNOmni))
+suppressMessages(library(data.table))
+suppressMessages(library(R.utils))
+suppressMessages(library(SNPRelate))
+suppressMessages(library(dplyr))
+suppressMessages(library(optparse))   # 引入命令行解析包
+suppressMessages(library(rtracklayer)) # 引入依赖包
+
+# ====================================================================
+# 1. 命令行参数解析 (CLI 封装)
+# ====================================================================
+option_list = list(
+  make_option(c("-p", "--project_dir"), type="character", default=NULL, help="项目大基座根目录路径"),
+  make_option(c("-g", "--gtf_file"), type="character", default=NULL, help="物种基因组 GTF 注释文件路径")
+)
+
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+if (is.null(opt$project_dir) || is.null(opt$gtf_file)){
+  print_help(opt_parser)
+  stop("错误: 必须通过 --project_dir 和 --gtf_file 指定项目路径与参考基因组！", call.=FALSE)
+}
+
+# ====================================================================
+# 2. 提取细胞特异性表达矩阵 (bMIND 结果拆分)
+# ====================================================================
+###cell type expression
+path <- file.path(opt$project_dir, "CattleGTEx/OmiGA/cell_specific/")
+tissue <- list.dirs(path, full.names = TRUE, recursive = FALSE)
+tissue <- sapply(tissue, function(x) unlist(strsplit(x, "\\/"))[9])
+tissue <- data.frame(tissue)
+tissue <- tissue$tissue
+
+# 创建统一的细胞类型拆分中间输出目录
+ct_exp_dir <- file.path(opt$project_dir, "Deconvolution/Cattle/Bulk/Result_bMIND/CT_exp")
+dir.create(ct_exp_dir, recursive = TRUE, showWarnings = FALSE)
+
+for (i in 1:length(tissue)) {
+  load(paste0(opt$project_dir, "/Deconvolution/Cattle/Bulk/Result_bMIND/", tissue[[i]], "_bMIND.RData"))
+  dat <- data_list$A
+  CT <- colnames(dat)
+  
+  # === 修复死穴 1：将未定义变量 dat1 修正为加载的真实多维矩阵 dat ===
+  for (j in 1:dim(dat)[2]) {  
+    select_data <- data.frame(dat[, j, ])
+    
+    file_name <- file.path(ct_exp_dir, paste0(tissue[[i]], "_split_", CT[[j]], ".csv"))
+    write.csv(select_data, file_name)
+  }
+}
+
+# ====================================================================
+# 3. 解析参考基因组构建长度映射谱
+# ====================================================================
+##construct expression bed file
+message("正在导入参考基因组 GTF 文件并计算外显子累加长度...")
+gtf_obj = rtracklayer::import(opt$gtf_file)
+gtf = as.data.frame(gtf_obj)
+
+exon = gtf[gtf$type=="exon", c("start","end","gene_id")]
+gle = lapply(split(exon,exon$gene_id),function(x){
+  tmp=apply(x,1,function(y){
+    y[1]:y[2]
+  })
+  length(unique(unlist(tmp)))
+})
+gle=data.frame(gene_id=names(gle),
+               length=as.numeric(gle))
+
+# ====================================================================
+# 4. 自动化标准化与 BED 文件构建大循环
+# ====================================================================
+for (i in 1:length(tissue)) {
+  setwd(ct_exp_dir)
+  ct <- list.files(pattern = tissue[[i]])
+  ct <- sapply(ct, function(x) unlist(strsplit(x, "\\_"))[3])
+  ct <- sapply(ct, function(x) unlist(strsplit(x, "\\."))[1])
+  ct <- data.frame(ct)
+  ct <- ct$ct
+  
+  # 动态对接上游 2.3 步骤建立的统一格式预测比例文件
+  frac_path <- file.path(opt$project_dir, "Deconvolution/Cattle/Bulk/Results_DWLS", tissue[[i]], "Results", paste0("Predict_", tissue[[i]], "_DWLS.csv"))
+  frac <- read.csv(frac_path, row.names = 1)[-c(601:700),]
+  sample_id <- rownames(frac)
+  
+  for (j in 1:length(ct)) {
+    setwd(ct_exp_dir)
+    bulk <- read.csv(paste0(tissue[[i]], "_split_", ct[[j]], ".csv"), row.names = 1)
+    colnames(bulk) <- rownames(frac)
+    Counts = counts = bulk
+    le = gle[match(rownames(counts),gle$gene_id),"length"]
+    counts$Length <- le
+    counts <- na.omit(counts)
+    kb <- counts$Length / 1000
+    x = ncol(counts)
+    countdata <- counts[,1:x-1]
+    rpk <- countdata / kb
+    rpk = rpk[complete.cases(rpk),]
+    tpm <- t(t(rpk)/colSums(rpk) * 1000000)
+    TPM <- tpm
+
+    samids = colnames(Counts) # sample id
+    expr_counts = Counts
+    expr = DGEList(counts=expr_counts) # counts
+    nsamples = length(samids) # sample number
+    ngenes = nrow(expr_counts) 
+    y = calcNormFactors(expr, method="TMM")
+    TMM = cpm(y,normalized.lib.sizes=T)
+
+    count_threshold = 6
+    tpm_threshold = 0.1
+    sample_frac_threshold = 0.2
+    sample_count_threshold = 10
+    expr_tpm = TPM[rownames(expr_counts),samids]
+    tpm_th = rowSums(expr_tpm >= tpm_threshold)
+    count_th = rowSums(expr_counts >= count_threshold)
+    ctrl1 = tpm_th >= (sample_frac_threshold * nsamples)
+    ctrl2 = count_th >= (sample_frac_threshold * nsamples)
+    mask = ctrl1 & ctrl2
+    TMM_pass = TMM[mask,]
+    rank_qnorm <- function(x) {
+      result <- qnorm((rank(x, na.last = "keep") - 0.5) / sum(!is.na(x)))
+      return(result)
+    }
+    TMM_inv = t(apply(TMM_pass, MARGIN = 1, FUN = rank_qnorm))
+
+    region_annot <- gtf
+    geneid = region_annot$gene_id
+    expr_matrix = TMM_inv[rownames(TMM_inv) %in= geneid,]
+
+
+    bed_annot = region_annot[region_annot$gene_id %in% rownames(expr_matrix),]
+    bed = data.frame(bed_annot,expr_matrix[bed_annot$gene_id,])
+    bed = bed[bed[,1] %in% as.character(1:30),]
+    bed[,1] = as.numeric(bed[,1])
+    bed = bed[order(bed[,1],bed[,2]),]
+    colnames(bed)[1] = "#Chr"
+
+    bed <- bed[bed$type == "gene",]
+    bed <- bed[bed$gene_biotype == "protein_coding" | bed$gene_biotype == "lncRNA",]
+    start = bed$start[bed$strand == "-"]
+    end = bed$end[bed$strand == "-"]
+    bed$start[bed$strand == "-"] = end
+    bed$end[bed$strand == "-"] = start
+    bed_unique <- bed[!duplicated(bed$gene_id), ]
+    rownames(bed_unique) = bed_unique$gene_id
+    bed_unique1 <- bed_unique[,-c(1:25)]
+    bed_unique <- bed_unique[,-c(4:9,11:25)]
+    colnames(bed_unique1) <- colnames(bulk)
+    bed <- data.frame(bed_unique[,c(1:4)],bed_unique1)
+    names(bed)[1:4] <- c("#Chr","start","end","gene_id")
+    
+    # 动态切换并创建具体的细胞特异性分析目录
+    final_out_dir <- file.path(opt$project_dir, "CattleGTEx/OmiGA/cell_specific", tissue[[i]], ct[[j]])
+    dir.create(final_out_dir, recursive = TRUE, showWarnings = FALSE)
+    setwd(final_out_dir)
+    
+    fwrite(bed, file = "expr_tmm_inv.bed", sep = "\t")
+    message(paste("[成功] 组织:", tissue[[i]], " -> 细胞类型:", ct[[j]], "矩阵转换成功。"))
+  }
+}
