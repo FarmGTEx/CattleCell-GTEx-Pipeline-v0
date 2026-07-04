@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ====================================================================
-# Process 8: GWAS & eQTL 联合流转管道总控
+# Process 8: Master Control Script for the GWAS & eQTL Integration Pipeline
 # ====================================================================
 
 PROJECT_DIR=""
@@ -10,13 +10,13 @@ LOG_DIR="./gwas_coloc_logs"
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --project_dir) PROJECT_DIR="$2"; shift ;;
-        *) echo -e "\033[31m[错误] 未知参数: $1\033[0m"; exit 1 ;;
+        *) echo -e "\033[31m[ERROR] Unknown argument: $1\033[0m"; exit 1 ;;
     esac
     shift
 done
 
 if [ -z "$PROJECT_DIR" ]; then
-    echo -e "\033[33m[用法]\033[0m bash run_gwas_coloc_pipeline.sh --project_dir /path/to/project"
+    echo -e "\033[33m[USAGE]\033[0m bash run_gwas_coloc_pipeline.sh --project_dir /path/to/project"
     exit 1
 fi
 
@@ -28,40 +28,41 @@ run_step() {
     local log_file="${LOG_DIR}/${step_name}.log"
 
     echo -e "\n========================================================================"
-    echo "[管道启动] 正在执行: ${step_name}"
-    echo "--------------------------- 实时终端输出 ---------------------------"
+    echo "[PIPELINE START] Running: ${step_name}"
+    echo "--------------------------- Real-time terminal output ---------------------------"
 
     eval "${script_cmd}" 2>&1 | tee "${log_file}"
     local exit_code=${PIPESTATUS[0]}
 
     echo "--------------------------------------------------------------------"
     if [ "$exit_code" -ne 0 ]; then
-        echo -e "\033[31m[阻断拦截] 步骤异常退出 (Exit Code: ${exit_code})\033[0m"
+        echo -e "\033[31m[STOPPED] Step failed with a non-zero exit code (Exit Code: ${exit_code})\033[0m"
         exit "$exit_code"
     else
-        echo -e "\033[32m[成功] ${step_name} 执行完毕。\033[0m"
+        echo -e "\033[32m[SUCCESS] ${step_name} completed successfully.\033[0m"
     fi
 }
 
 # ====================================================================
-# 基于统一根目录动态推导上游与下游的相互嵌合输入路径
+# Dynamically derive upstream and downstream input paths from the shared root directory
 # ====================================================================
 EQTL_PATH="${PROJECT_DIR}/CattleGTEx/OmiGA/eQTL"
 GWAS_PATH="${PROJECT_DIR}/Downstream_analysis/complextraits/GWAS"
 BFILE_FILE="${PROJECT_DIR}/CattleGTEx/panel_Hols"
 
-# 构建中转站输出物理文件夹（确保输出咬合）
+# Create intermediate output directories to ensure consistent handoff between steps
 COLOC_INPUT_EQTL="${PROJECT_DIR}/CattleGTEx/OmiGA/Coloc/gwas_coloc/Bulk"
 COLOC_INPUT_GWAS="${PROJECT_DIR}/CattleGTEx/OmiGA/Coloc/gwas_coloc/GWAS"
 COLOC_FINAL_OUT="${PROJECT_DIR}/CattleGTEx/OmiGA/Coloc/gwas_coloc/Results"
 
-echo ">>>>>>>>>>>>>>>>>>>> 开始运行 GWAS & eQTL 共定位全套管道 <<<<<<<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>>>>>>>>> Starting the full GWAS & eQTL colocalization pipeline <<<<<<<<<<<<<<<<<<<<"
 
-# Step 1: 运行 GCTA-COJO 格式转换 (R部分)
+# Step 1: Run GCTA-COJO format conversion using the R script
 run_step "8.1.GCTA_Cojo_Format" "Rscript GCTA-COJO.R ${PROJECT_DIR}"
 
-# Step 2: 运行 GCTA64 群体扫描条件分析 (原代码尾部剥离的 Bash 部分，100%原样保留)
-echo -e "\n[执行中] 正在拉起 gcta64 独立信号条件扫描..."
+# Step 2: Run GCTA64 conditional analysis for independent signal detection
+# This Bash section was extracted from the original script and preserved unchanged
+echo -e "\n[RUNNING] Starting gcta64 conditional scan for independent signals..."
 for trait_dir in "$GWAS_PATH"/*/; do
     if [ -d "$trait_dir" ]; then
         gwas_file="${trait_dir}$(basename "$trait_dir")_cojo.txt"
@@ -77,13 +78,13 @@ for trait_dir in "$GWAS_PATH"/*/; do
     fi
 done
 
-# Step 3: 准备 eQTL 共定位输入块 (1.Prepare_eQTL.R)
+# Step 3: Prepare eQTL input blocks for colocalization
 run_step "8.2.Prepare_eQTL" "Rscript 1.Prepare_eQTL.R --input_dir ${EQTL_PATH} --output_dir ${COLOC_INPUT_EQTL}"
 
-# Step 4: 准备 GWAS 窗口外延输入块 (2.Prepare_GWAS.R，使其与上游的 GWAS_PATH 嵌合)
+# Step 4: Prepare GWAS window-expanded input blocks and align them with GWAS_PATH
 run_step "8.3.Prepare_GWAS" "Rscript 2.Prepare_GWAS.R --gwas_dir ${GWAS_PATH} --cojo_dir ${GWAS_PATH} --output_dir ${COLOC_INPUT_GWAS}"
 
-# Step 5: 启动最终的贝叶斯共定位核心运算 (3.run_coloc.R)
+# Step 5: Run the final Bayesian colocalization analysis
 run_step "8.4.Run_Coloc" "Rscript 3.run_coloc.R --gwas_dir ${COLOC_INPUT_GWAS} --bulk_dir ${COLOC_INPUT_EQTL} --result_dir ${COLOC_FINAL_OUT}"
 
-echo -e "\n>>>>>>>>>>>>>>>>>>>> 全套 GWAS-eQTL 嵌合管道运行结束！ <<<<<<<<<<<<<<<<<<<<"
+echo -e "\n>>>>>>>>>>>>>>>>>>>> GWAS-eQTL integration pipeline completed successfully! <<<<<<<<<<<<<<<<<<<<"
