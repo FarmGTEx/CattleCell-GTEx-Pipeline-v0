@@ -5,9 +5,6 @@ library(Seurat)
 library(patchwork)
 library(data.table)
 
-# ====================================================================
-# 【仅增外部传参接管】抽离写死路径
-# ====================================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
   stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
@@ -63,7 +60,7 @@ pathway <- pathway[,-1]
 kegg <- split(pathway$gene, pathway$group)
 
 
-for (k in 1:length(tissue)) { #10, 15, 44, 38, 47, 17, 33
+for (k in 1:length(tissue)) { 
 sc <- readRDS(list1[[k]])
 sc <- NormalizeData(sc, normalization.method = "LogNormalize", scale.factor = 10000)
 sc <- FindVariableFeatures(sc, selection.method = "vst", nfeatures = 2000)
