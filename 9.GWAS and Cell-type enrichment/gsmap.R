@@ -5,12 +5,9 @@ library(argparser)
 library(dplyr)
 library(data.table)
 
-# ====================================================================
-# 【仅增外部传参接管】抽离写死路径
-# ====================================================================
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("错误: 必须提供项目根目录路径 (PROJECT_DIR)！", call. = FALSE)
+  stop("Error: the project root directory path must be provided (PROJECT_DIR)！", call. = FALSE)
 }
 PROJECT_DIR <- args[1]
 # ====================================================================
@@ -30,7 +27,7 @@ meta <- sc1@meta.data
 genes <- rownames(count)
 meta <- meta[,c(1,2,3,4,5,29)]
 adata <- AnnData(
-  X = t(count),  # 需要转置为 cells x genes
+  X = t(count),  # Need to transpose to cells × genes
   obs = meta,
   var = data.frame(gene_ids = genes, row.names = genes)
 )
@@ -53,13 +50,6 @@ sc$main_ct[sc$cellType == "Per"] <- "Per"
 Idents(sc) <- "main_ct"
 sc.markers <- FindAllMarkers(sc, min.pct = 0.25, logfc.threshold = 0.25)
 write.csv(sc.markers, file= paste0(PROJECT_DIR, "/CattleGTEx/gsMap/human_brain_ct_marker.csv"))
-
-# 原作手误混入的 Python 绘图代码，一字未改，100% 遵照原样保留
-annotation_counts = data.cells["annotation"].value_counts()
-import matplotlib.pyplot as plt
-data.plt.cluster_scatter(res_key='annotation')
-plt.savefig(paste0(PROJECT_DIR, "/CattleGTEx/stData/Brain/plot/region_anno/all_anno.pdf"), format="pdf", dpi=300, bbox_inches="tight")
-
 
 ##gsMap
 adata.layers["count"] = adata.raw.X.copy()
