@@ -28,7 +28,7 @@ if (params.help) {
     exit 0
 }
 
-// 默认参数配置
+// Default parameter configuration
 params.outdir = "./results"
 params.species_name = "custom_ref"
 params.mito_threshold = 10
@@ -121,10 +121,10 @@ process SEURAT_PER_SAMPLE_QC {
     cat << 'EOF' > run_qc.R
     suppressPackageStartupMessages(library(Seurat))
 
-    # 1. 读取数据
+    # 1. Read data
     sc.data <- Read10X(data.dir = "${matrix_dir}")
     
-    # 辅助函数：当遇到超低质量时，输出 Dummy 占位文件并优雅退出
+    # Helper function: When extremely low quality is encountered, output a dummy placeholder file and exit gracefully.
     write_dummy_and_exit <- function(reason) {
         message("🚨 [MOCK/LOW-QUALITY DETECTED] ", reason)
         message("Creating dummy Seurat object to verify pipeline flow seamlessly...")
@@ -135,7 +135,7 @@ process SEURAT_PER_SAMPLE_QC {
         quit(save = "no", status = 0)
     }
 
-    # 如果初始检测到的细胞数极少，直接启动安全阀机制
+    # If the number of cells initially detected is extremely low, the safety valve mechanism is triggered immediately.
     if (ncol(sc.data) < 30) {
         write_dummy_and_exit("Initial cells in matrix < 30. Too few cells.")
     }
@@ -143,7 +143,7 @@ process SEURAT_PER_SAMPLE_QC {
     library(ddqcR)
     library(DoubletFinder)
 
-    # 2. QC 过滤阶段
+    # 2.QC filtering stage
     sc <- tryCatch({
         obj <- CreateSeuratObject(counts = sc.data, project = "${sampleid}", min.cells = 3)
         if (ncol(obj) < 20) return(NULL)
@@ -164,7 +164,7 @@ process SEURAT_PER_SAMPLE_QC {
         write_dummy_and_exit("QC filtering resulted in 0 or too few cells (< 10).")
     }
 
-    # 3. 降维与双细胞鉴定
+    # 3. Dimensionality Reduction and Doublet Identification
     pipeline_success <- tryCatch({
         sc <- NormalizeData(sc, normalization.method = "LogNormalize", scale.factor = 10000)
         sc <- FindVariableFeatures(sc, selection.method = "vst", nfeatures = 2000)
@@ -228,7 +228,7 @@ process SEURAT_INTEGRATION {
     sc_list <- lapply(rds_list, readRDS)
     names(sc_list) <- gsub("_filtered.rds", "", rds_list)
     
-    # Mock 数据保护机制
+    # Mock Data Protection Mechanism
     if (ncol(sc_list[[1]]) == 10) {
         message("MOCK DETECTED Bypassing complex integration for Mock data.")
         pdf("UMAP_Clusters.pdf", width=8, height=6); plot(1, main="Integration VERIFIED!"); dev.off()
@@ -237,12 +237,12 @@ process SEURAT_INTEGRATION {
         quit(save = "no", status = 0)
     }
 
-    # 真实数据集整合逻辑
+    # Logic for Real-World Dataset Integration
     library(harmony)
     library(dplyr)
     library(ggplot2)
 
-    # 合并数据集 (Merge)
+    # Merge dataset
     if (length(sc_list) > 1) {
         sc <- merge(sc_list[[1]], y = sc_list[2:length(sc_list)], 
                     add.cell.ids = names(sc_list), project = "sc_project")
@@ -267,16 +267,16 @@ process SEURAT_INTEGRATION {
     sc <- FindClusters(sc, resolution = 0.5)
     sc <- RunUMAP(sc, reduction = reduction_use, dims = 1:pcs)
 
-    # 🌟 核心修复：彻底放弃有 Bug 的 DimPlot！手动提取 UMAP 坐标，使用纯净的原生 ggplot2 绘图
+    # 🌟 Manually extract UMAP coordinates and use standard, native ggplot2 for plotting.
     tryCatch({
         pdf("UMAP_Clusters.pdf", width = 8, height = 6)
         
-        # 1. 提取 UMAP 坐标与细胞分类元数据
+        # 1. Extract UMAP coordinates and cell classification metadata.
         umap_data <- as.data.frame(sc@reductions\$umap@cell.embeddings)
         umap_data\$Cluster <- sc\$seurat_clusters
         umap_data\$Sample <- sc\$orig.ident
         
-        # 2. 原生 ggplot2 绘制聚类着色图 (第一页)
+        # 2. Creating Cluster-Colored Plots with Native ggplot2
         p1 <- ggplot(umap_data, aes(x = UMAP_1, y = UMAP_2, color = Cluster)) +
               geom_point(size = 0.5, alpha = 0.8) +
               theme_classic() +
@@ -284,7 +284,7 @@ process SEURAT_INTEGRATION {
               guides(color = guide_legend(override.aes = list(size = 3)))
         print(p1)
         
-        # 3. 原生 ggplot2 绘制样本着色图 (第二页)
+        # 3. Plotting Sample-Colored Graphs Using Native ggplot2
         p2 <- ggplot(umap_data, aes(x = UMAP_1, y = UMAP_2, color = Sample)) +
               geom_point(size = 0.5, alpha = 0.8) +
               theme_classic() +
@@ -297,11 +297,11 @@ process SEURAT_INTEGRATION {
         if (dev.cur() > 1) dev.off()
     })
 
-    # 提取并保存 Marker 基因 (到达要求，整个流程在此处结束)
+    # Extract and save marker genes.
     sc.markers <- FindAllMarkers(sc, min.pct = 0.25, logfc.threshold = 0.25)
     write.csv(sc.markers, file = "cluster_markers.csv", row.names = FALSE)
 
-    # 100% 确保保存合并后的 RDS 文件
+    # Ensure the merged RDS file is saved (100%).
     saveRDS(sc, file = "merged_project.rds")
     EOF
 
@@ -310,7 +310,7 @@ process SEURAT_INTEGRATION {
 }
 
 ////////////////////////////////////////
-// WORKFLOW 工作流
+// WORKFLOW
 ////////////////////////////////////////
 workflow {
     if (!params.samplesheet) {
@@ -332,6 +332,6 @@ workflow {
     count_matrices = CELLRANGER_COUNT(samples_ch, ref_idx).count_matrix
     qc_rds_files = SEURAT_PER_SAMPLE_QC(count_matrices).sample_rds
     
-    // 直接传入收集好的 rds 文件进行整合即可
+    // Simply pass in the collected .rds files to integrate them.
     SEURAT_INTEGRATION(qc_rds_files.collect())
 }
